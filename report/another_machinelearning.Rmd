@@ -1,0 +1,482 @@
+---
+title: "compare meachine learning"
+author: "Guangshuai Wang"
+date: "`r Sys.Date()`"
+output:   
+  rmdformats::readthedown:
+    highlight: kate
+    lightbox: false
+    toc_depth: 3
+    mathjax: true
+---
+
+```{r , include=FALSE}
+options(max.print = "120")
+knitr::opts_chunk$set(echo = TRUE, comment = "#>", eval = TRUE, collapse = TRUE,cache = FALSE,warning = FALSE)
+knitr::opts_knit$set(width = 120)
+```
+
+```{r , include=FALSE}
+library(tidyverse)
+library(reticulate)
+use_python(Sys.which("python"))
+```
+
+```{python, include = FALSE}
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.metrics import precision_recall_curve,roc_curve,auc,confusion_matrix
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.rcParams['pdf.fonttype'] = 42
+mpl.rcParams['ps.fonttype'] = 42
+plt.rcParams.update({'font.family':'Arial'})
+from sklearn.metrics import roc_curve,auc
+from sklearn.model_selection import KFold
+from sklearn.metrics import roc_auc_score,make_scorer 
+scorer = make_scorer(roc_auc_score)
+```
+
+```{python}
+from sklearn.metrics import roc_auc_score,make_scorer 
+scorer = make_scorer(roc_auc_score)
+Blosum62_matrix = pd.read_csv("../data/BLOSUM62.csv",comment="#")
+Protein_alphabet = list("ARNDCQEGHILKMFPSTWYVX")
+Blosum62_matrix = Blosum62_matrix[Protein_alphabet]
+Blosum62_matrix = Blosum62_matrix.loc[Protein_alphabet]
+
+def blosum62(peptide,maxlen):
+    encoder = np.empty((maxlen,21))
+    if len(peptide) <=maxlen:
+        peptide = peptide + "X"*(maxlen-len(peptide))
+    for i in range(len(peptide)):
+        pep = list(peptide)[i]
+        coder = Blosum62_matrix[pep]
+        encoder[i] = coder
+    return encoder.flatten()
+def auc_pr(data,true_label,prediction,rank = False):
+    if rank:
+        fpr,tpr,_ = roc_curve(data[true_label],1-data[prediction])
+        precision,recall,_ = precision_recall_curve(data[true_label],1-data[prediction])
+    else:
+        fpr,tpr,_ = roc_curve(data[true_label],data[prediction])
+        precision,recall,_ = precision_recall_curve(data[true_label],data[prediction])
+        
+    AUC = auc(fpr,tpr)
+    PR = auc(recall,precision)
+    
+    return fpr,tpr,recall,precision,AUC,PR
+def IMM_process(Data,peptide):
+    sam_pep_ID = Data["pep_ID"].unique()
+    res = []
+    p_ID = []
+    Data["length"] = Data["pep"].map(len)
+    for a in sam_pep_ID:
+        Mean = []    
+        ID = Data[Data["pep_ID"] == a]
+        for i in ID["HLA"].unique():
+            Data_HLA = ID[ID["HLA"] == i]
+            prediction = []
+            for l in Data_HLA["length"].unique():
+                Data_len = Data_HLA[Data_HLA["length"] == l]
+                pre = Data_len["prediction"].max()
+                prediction.append(pre)
+            #x_mean = x["Rank"].mean()
+            x_mean = np.mean(prediction)
+            Mean.append(x_mean)
+        res.append(max(Mean))
+        p_ID.append(a)
+    result = pd.DataFrame({"pep_ID":p_ID,"prediction":res})
+    result = result.merge(peptide,how = "inner",on = "pep_ID" )
+    
+    return result
+def evaluate(estimator,test_X,test_Y):
+        pred = estimator.predict(test_X)
+        result = roc_auc_score(test_Y,pred)
+        return result
+def evaluate2(estimator,data,peptide,test_X):
+        data["prediction"] = estimator.predict(test_X)
+        result = IMM_process(data,peptide)
+        result = auc_pr(result,"Immunogenicity","prediction")
+        return result[4]
+def method(estimator):
+    kf = KFold(n_splits=5)
+    fold_indices = list(kf.split(np.arange(X.shape[0])))
+    holding = {'validation': [], 'mer15': [],'kmer': []}
+    for fold in fold_indices:
+        # split
+        train_X, train_Y, test_X, test_Y = X[fold[0]], np.array(Y)[fold[0]], X[fold[1]], np.array(Y)[fold[1]]
+        # train
+        estimator.fit(train_X, train_Y)
+        # test in validation set
+        result_validation = evaluate(estimator,test_X,test_Y)
+        holding['validation'].append(result_validation)
+        # test in mer15
+        AUC = evaluate2(estimator,mer15,peptide,mer15_X)
+        holding['mer15'].append(AUC)
+        # test in kmer
+        AUC = evaluate2(estimator,kmer,peptide,kmer_X)
+        holding['kmer'].append(AUC)
+    return holding
+```
+
+## data process
+
+```{python,eval = FALSE}
+peptide = pd.read_csv("../data/peptide.csv")
+immuno_data = pd.read_csv("../data/IMM_data_random2.csv")
+immuno_data["pep_blosum"] = immuno_data["Description"].apply(blosum62,args=(21,))
+immuno_data["MHC_blosum"] = immuno_data["sequence"].apply(blosum62,args=(34,))
+X = np.empty((len(immuno_data),1155))
+for i in range(len(immuno_data)):
+    x = immuno_data.iloc[i,6]
+    y = immuno_data.iloc[i,7]
+    X[i, :] = np.concatenate((x,y))
+Y = immuno_data["label"].values
+mer15 = pd.read_csv("../data/15mer_data.csv")
+mer15["pep_blosum"] = mer15["pep"].apply(blosum62,args=(21,))
+mer15["MHC_blosum"] = mer15["sequence"].apply(blosum62,args=(34,))
+mer15_X = np.empty((len(mer15),1155))
+for i in range(len(mer15)):
+    x = mer15.iloc[i,5]
+    y = mer15.iloc[i,6]
+    mer15_X[i,:] = np.concatenate((x,y))
+kmer = pd.read_csv("../data/kmer_data.csv")
+kmer["pep_blosum"] = kmer["pep"].apply(blosum62,args=(21,))
+kmer["MHC_blosum"] = kmer["sequence"].apply(blosum62,args=(34,))
+kmer_X = np.empty((len(kmer),1155))
+for i in range(len(kmer)):
+    x = kmer.iloc[i,5]
+    y = kmer.iloc[i,6]
+    kmer_X[i,:] = np.concatenate((x,y))
+holder = {}
+```
+
+## machine learning
+
+### Adaboost Classifier
+
+```{python,eval = FALSE}
+from sklearn.model_selection import cross_validate
+from sklearn.ensemble import AdaBoostClassifier
+cv_results = []
+space = np.linspace(20, 220, 6)
+for i in space:
+    cv_result = cross_validate(AdaBoostClassifier(n_estimators=int(i)), X, Y, cv=3, scoring=scorer, n_jobs=-1,
+                               verbose=5)
+    cv_results.append(cv_result)
+
+y1 = [item['test_score'].mean() for item in cv_results] 
+y1_e = [item['test_score'].std() for item in cv_results]
+
+ax1 = plt.subplot(1, 1, 1)
+ax1.plot(np.arange(len(space)), y1, marker='o', markersize=5) 
+ax1.fill_between(np.arange(len(space)), [y1[i] - y1_e[i] for i in range(len(space))],
+                 [y1[i] + y1_e[i] for i in range(len(space))], alpha=0.2) #
+ax1.set_xticks(np.arange(len(space)))
+ax1.set_xticklabels(['{0:.2f}'.format(i) for i in space])
+plot.show()
+estimator = AdaBoostClassifier(n_estimators=180)
+holder['Adaboost'] = method(estimator = estimator)
+```
+
+### KNN Classifier
+
+```{python,eval = FALSE}
+# KNN Classifier
+cv_results = []
+from sklearn.neighbors import KNeighborsClassifier
+space = np.linspace(1,100,10)
+for i in space:
+    cv_result = cross_validate(KNeighborsClassifier(n_neighbors=int(i)),X,Y,cv=5,scoring=rmse,n_jobs=-1,verbose=5)
+    cv_results.append(cv_result)
+y1 = [item['test_score'].mean() for item in cv_results]
+y1_e = [item['test_score'].std() for item in cv_results]
+ax1 = plt.subplot(1,1,1)
+ax1.plot(np.arange(len(space)),y1,marker='o',markersize=5)
+ax1.fill_between(np.arange(len(space)),[y1[i]-y1_e[i] for i in range(len(space))],[y1[i]+y1_e[i] for i in range(len(space))],alpha=0.2)
+ax1.set_xticks(np.arange(len(space)))
+ax1.set_xticklabels(['{0:.2f}'.format(i) for i in space])
+estimator = KNeighborsClassifier(n_neighbors=1)
+holder['KNN'] = method(estimator = estimator)
+```
+
+### Random forest Classifier
+
+```{python,eval = FALSE}
+cv_results = []
+from sklearn.ensemble import RandomForestClassifier
+space = np.linspace(1, 100, 20)
+for i in space:
+    cv_result = cross_validate(RandomForestClassifier(n_estimators=200,min_samples_leaf=int(i)), X, Y, cv=3, scoring=rmse, n_jobs=-1,
+                               verbose=5)
+    cv_results.append(cv_result)
+y1 = [item['test_score'].mean() for item in cv_results]
+y1_e = [item['test_score'].std() for item in cv_results]
+ax1 = plt.subplot(1, 1, 1)
+ax1.plot(np.arange(len(space)), y1, marker='o', markersize=5)
+ax1.fill_between(np.arange(len(space)), [y1[i] - y1_e[i] for i in range(len(space))],
+                 [y1[i] + y1_e[i] for i in range(len(space))], alpha=0.2)
+ax1.set_xticks(np.arange(len(space)))
+ax1.set_xticklabels(['{0:.2f}'.format(i) for i in space])
+estimator = RandomForestClassifier(n_estimators=200,min_samples_leaf=1)
+holder['RF'] = method(estimator = estimator)
+```
+
+### SVC
+
+```{python,eval = FALSE}
+cv_results = []
+from sklearn.svm import LinearSVC
+space = np.logspace(-3, 3, 7)
+for i in space:
+    cv_result = cross_validate(LinearSVC(C=i), X, Y, cv=3, scoring=rmse, n_jobs=-1,
+                               verbose=5)
+    cv_results.append(cv_result)
+y1 = [item['test_score'].mean() for item in cv_results]
+y1_e = [item['test_score'].std() for item in cv_results]
+ax1 = plt.subplot(1, 1, 1)
+ax1.plot(np.arange(len(space)), y1, marker='o', markersize=5)
+ax1.fill_between(np.arange(len(space)), [y1[i] - y1_e[i] for i in range(len(space))],
+                 [y1[i] + y1_e[i] for i in range(len(space))], alpha=0.2)
+ax1.set_xticks(np.arange(len(space)))
+ax1.set_xticklabels(['{0:.2f}'.format(i) for i in space])
+estimator = LinearSVC(C=0.01)
+holder['SVM'] = method(estimator = estimator)
+np.save("../data/another_machine_learning.npy",holder)
+```
+
+```{python}
+holder = np.load("../data/another_machine_learning.npy",allow_pickle=True)
+mean_15mer = []
+mean_kmer = []
+method_type = []
+method_type.append("TLimmuno2")
+mean_15mer.append(0.7332)
+mean_kmer.append(0.7372)
+for i in holder.tolist().keys():
+  DF = pd.DataFrame(holder.tolist()[i])
+  mean_15mer.append(DF["mer15"].mean())
+  mean_kmer.append(DF["kmer"].mean())
+  method_type.append(i)
+method_type[1] = "Adaboost"
+```
+
+## deeplearning 
+
+```{python, eval = FALSE}
+#PBS
+#python
+import pandas as pd
+import os
+import tensorflow as tf
+from sklearn.model_selection import train_test_split,KFold
+import numpy as np
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+from sklearn.metrics import auc,precision_recall_curve,roc_curve,confusion_matrix,average_precision_score
+import matplotlib.pyplot as plt
+import sys
+sys.path.append("/public/slst/home/wanggsh/Project/MHCII/utils")
+from Blosum62 import blosum62
+#Data process
+
+immuno_data = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/IMM_data_random2.csv")
+immuno_data["pep_blosum"] = immuno_data["Description"].apply(blosum62,args=(21,))
+immuno_data["MHC_blosum"] = immuno_data["sequence"].apply(blosum62,args=(34,))
+peptide = np.empty((len(immuno_data),21,21))
+for i in range(len(immuno_data)):
+    peptide[i] = immuno_data["pep_blosum"][i].reshape((21,21))
+#mhc 
+MHC = np.empty((len(immuno_data),34,21))
+for i in range(len(immuno_data)):
+    MHC[i] = immuno_data["MHC_blosum"][i].reshape((34,21))
+labels = immuno_data["label"].values
+
+peptide_CNN = np.empty((len(immuno_data),21,21,1))
+for i in range(len(immuno_data)):
+    peptide_CNN[i,:,:,] = immuno_data["pep_blosum"][i].reshape((21,21,1))
+
+
+MHC_CNN = np.empty((len(immuno_data),34,21,1))
+for i in range(len(immuno_data)):
+    MHC_CNN[i] = immuno_data["MHC_blosum"][i].reshape((34,21,1))
+labels_CNN = immuno_data["label"].values
+
+def DNN():
+    pep = tf.keras.Input(shape = (21,21))
+    MHC = tf.keras.Input(shape = (34,21))
+    x = tf.keras.layers.Flatten()(pep)
+    y = tf.keras.layers.Flatten()(MHC)
+    combined = tf.keras.layers.concatenate([x,y])
+
+    z = tf.keras.layers.Dense(400,activation = "relu")(combined)
+    z = tf.keras.layers.Dense(200,activation = "relu")(z)
+    z = tf.keras.layers.Dense(1,activation = "sigmoid")(z)
+    
+    model = tf.keras.Model(inputs = [pep,MHC],outputs = z)
+
+    return model
+DNN = DNN()
+
+def CNN():
+    pep = tf.keras.Input(shape = (21,21,1))
+    MHC = tf.keras.Input(shape = (34,21,1))
+
+    x = tf.keras.layers.Conv2D(filters=16, kernel_size=(2, 12))(pep)  # 9
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.activations.relu(x)
+    x = tf.keras.layers.Conv2D(filters=32, kernel_size=(2, 1))(x)    # 8
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.activations.relu(x)
+    x = tf.keras.layers.MaxPool2D(pool_size=(2, 1), strides=(2, 1))(x)  # 4
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.Model(inputs=pep, outputs=x)
+
+    y = tf.keras.layers.Conv2D(filters=16, kernel_size=(15, 12))(MHC)     # 32
+    y = tf.keras.layers.BatchNormalization()(y)
+    y = tf.keras.activations.relu(y)
+    y = tf.keras.layers.MaxPool2D(pool_size=(2, 1), strides=(2, 1))(y)  # 16
+    y = tf.keras.layers.Conv2D(filters=32,kernel_size=(9,1))(y)    # 8
+    y = tf.keras.layers.BatchNormalization()(y)
+    y = tf.keras.activations.relu(y)
+    y = tf.keras.layers.MaxPool2D(pool_size=(2, 1),strides=(2,1))(y)  # 4
+    y = tf.keras.layers.Flatten()(y)
+    y = tf.keras.Model(inputs=MHC,outputs=y)
+
+    combined = tf.keras.layers.concatenate([x.output,y.output])
+    z = tf.keras.layers.Dense(128,activation='relu')(combined)
+    z = tf.keras.layers.Dense(1,activation='sigmoid')(z)
+
+    model = tf.keras.Model(inputs=[pep,MHC],outputs=z)
+    return model
+
+CNN = CNN()
+callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)#change
+Loss = tf.keras.losses.BinaryCrossentropy()
+Optimizer = tf.keras.optimizers.Adam(learning_rate = 0.00008) 
+Metrics = [tf.keras.metrics.AUC(),tf.keras.metrics.BinaryAccuracy(),tf.keras.metrics.AUC(curve = "PR"),tf.keras.metrics.Precision()] #add ROC&PR auc &PPV in metrics
+Batch_size= 200
+Epochs= 150
+Verbose = 2 
+
+DNN.compile(
+        loss = Loss,
+        optimizer = Optimizer,
+        metrics = Metrics)
+pep_Train,pep_Test,MHC_Train,MHC_Test,label_Train,label_Test = train_test_split(peptide,MHC,labels,test_size=0.1,random_state=202209,stratify=labels)
+history = DNN.fit([pep_Train,MHC_Train],label_Train,
+        batch_size=Batch_size,epochs=Epochs,
+        validation_data = ([pep_Test,MHC_Test],label_Test),
+        verbose = Verbose,
+        callbacks = callback)
+
+benchmark_Data = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/kmer_data.csv")
+benchmark_Data["pep_blosum"] = benchmark_Data["pep"].apply(blosum62,args=(21,))
+benchmark_Data["MHC_blosum"] = benchmark_Data["sequence"].apply(blosum62,args=(34,))
+bench_pep = np.empty((len(benchmark_Data),21,21))
+for i in range(len(benchmark_Data)):
+    bench_pep[i] = benchmark_Data["pep_blosum"][i].reshape((21,21))
+#mhc
+bench_MHC = np.empty((len(benchmark_Data),34,21))
+for i in range(len(benchmark_Data)):
+    bench_MHC[i] = benchmark_Data["MHC_blosum"][i].reshape((34,21))
+prediction = DNN.predict([bench_pep,bench_MHC])
+
+benchmark_Data["prediction"] = prediction
+benchmark_Data.pop("pep_blosum")
+benchmark_Data.pop("MHC_blosum")
+benchmark_Data.to_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/kmer_DNN_result.csv")
+CNN.compile(
+        loss = Loss,
+        optimizer = Optimizer,
+        metrics = Metrics)
+pep_Train,pep_Test,MHC_Train,MHC_Test,label_Train,label_Test = train_test_split(peptide_CNN,MHC_CNN,labels_CNN,test_size=0.1,random_state=202209,stratify=labels)
+history = CNN.fit([pep_Train,MHC_Train],label_Train,
+        batch_size=Batch_size,epochs=Epochs,
+        validation_data = ([pep_Test,MHC_Test],label_Test),
+        verbose = Verbose,
+        callbacks = callback)
+
+bench_pep_CNN = np.empty((len(benchmark_Data),21,21,1))
+for i in range(len(benchmark_Data)):
+    bench_pep_CNN[i] = benchmark_Data["pep_blosum"][i].reshape((21,21,1))
+#mhc
+bench_MHC_CNN = np.empty((len(benchmark_Data),34,21,1))
+for i in range(len(benchmark_Data)):
+    bench_MHC_CNN[i] = benchmark_Data["MHC_blosum"][i].reshape((34,21,1))
+prediction = CNN.predict([bench_pep_CNN,bench_MHC_CNN])
+benchmark_Data["prediction"] = prediction
+benchmark_Data.pop("pep_blosum")
+benchmark_Data.pop("MHC_blosum")
+benchmark_Data.to_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/kmer_CNN_result.csv")
+```
+
+```{python}
+#CNN result
+peptide = pd.read_csv("../data/peptide.csv")
+result = pd.read_csv("../data/15mer_CNN_result.csv")
+result_15mer_CNN = IMM_process(result,peptide)
+result = auc_pr(result_15mer_CNN,"Immunogenicity","prediction")
+method_type.append("CNN")
+mean_15mer.append(result[4])
+result = pd.read_csv("../data/kmer_CNN_result.csv")
+result_15mer = IMM_process(result,peptide)
+result = auc_pr(result_15mer,"Immunogenicity","prediction")
+mean_kmer.append(result[4])
+```
+
+```{python}
+#DNN result
+result = pd.read_csv("../data/15mer_DNN_result.csv")
+result_15mer_DNN = IMM_process(result,peptide)
+result = auc_pr(result_15mer_DNN,"Immunogenicity","prediction")
+method_type.append("DNN")
+mean_15mer.append(result[4])
+result = pd.read_csv("../data/kmer_DNN_result.csv")
+result_15mer = IMM_process(result,peptide)
+result = auc_pr(result_15mer,"Immunogenicity","prediction")
+mean_kmer.append(result[4])
+```
+
+```{python}
+DF = pd.DataFrame({"method":method_type,"mer15":mean_15mer,"kmer":mean_kmer})
+```
+
+```{python}
+import seaborn as sns
+from matplotlib import cm
+n = 10
+x = np.arange(0, n, step=.5)
+y = x ** 2
+norm = plt.Normalize(y.min(), y.max())
+norm_y = norm(y)
+map_vir = cm.get_cmap(name='viridis')
+color = map_vir(norm_y)
+fig,ax = plt.subplots(figsize = (4,6))
+plt.bar(x = DF["method"],height = DF["mer15"],width =0.95,color = color[10:])
+ax.set_xlabel("")
+ax.set_ylabel("AUC",fontsize = 14)
+ax.set_ylim([0.5,0.75])
+plt.xticks(rotation = 90)
+plt.tight_layout()
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+plt.savefig("../figure/different_methods_15mer.pdf",dpi = 300,bbox_inches='tight',transparent=True)
+plt.show()
+```
+
+```{python}
+fig,ax = plt.subplots(figsize = (4,6))
+plt.bar(x = DF["method"],height = DF["kmer"],width =0.95,color = color[10:])
+ax.set_xlabel("")
+ax.set_ylabel("AUC",fontsize = 14)
+ax.set_ylim([0.5,0.75])
+plt.xticks(rotation = 90)
+plt.tight_layout()
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+plt.savefig("../figure/different_methods_kmer.pdf",dpi = 300,bbox_inches='tight',transparent=True)
+plt.show()
+```
