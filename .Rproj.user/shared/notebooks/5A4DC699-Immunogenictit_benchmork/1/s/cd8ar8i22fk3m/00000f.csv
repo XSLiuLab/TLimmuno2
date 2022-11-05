@@ -1,0 +1,21 @@
+"0","DF_k_sorted = DF_k.sort_values(by=[""pep"",""HLA""]).reset_index(drop = True)"
+"0","netMHCIIpan_ba_k = pd.read_csv(""/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/netMHCIIpan_k_mer_ba.csv"")"
+"0","netMHCIIpan_ba_k[""pep_length""] =netMHCIIpan_ba_k[""peptide""].map(len)"
+"0","net_kmer_ba = netMHCIIpan_process(netMHCIIpan_ba_k,allele,DF_k_sorted,peptide)"
+"0","kmer_ba_result = auc_pr(net_kmer_ba,""Immunogenicity"",""prediction"",rank = True)"
+"0","netMHCIIpan_el_k = pd.read_csv(""../data/netMHCIIpan_k_mer_el.csv"")"
+"0","netMHCIIpan_el_k[""pep_length""] =netMHCIIpan_el_k[""peptide""].map(len)"
+"0","net_kmer_el = netMHCIIpan_process(netMHCIIpan_el_k,allele,DF_k_sorted,peptide)"
+"0","kmer_el_result = auc_pr(net_kmer_el,""Immunogenicity"",""prediction"",rank = True)"
+"0","print(""BA AUC: {}"".format(kmer_ba_result[4]))"
+"1","BA AUC: 0.7056808778005946
+"
+"0","print(""BA PR_AUC: {}"".format(kmer_ba_result[5]))"
+"1","BA PR_AUC: 0.1910149930669585
+"
+"0","print(""EL AUC: {}"".format(kmer_el_result[4]))"
+"1","EL AUC: 0.6999570907530572
+"
+"0","print(""EL PR_AUC: {}"".format(kmer_el_result[5]))"
+"1","EL PR_AUC: 0.1594417550386672
+"

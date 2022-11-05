@@ -1,0 +1,11 @@
+"0","#python"
+"0","ax = sns.countplot(data=peptide, x=""Immunogenicity"")"
+"0","#ax.bar_label(ax.containers[0])"
+"0","ax.text(-0.1, 860, ""{:.3f}"".format(851/931))"
+"1","Text(-0.1, 860, '0.914')
+"
+"0","ax.text(0.9, 90, ""{:.3f}"".format(80/931))"
+"1","Text(0.9, 90, '0.086')
+"
+"0","plt.savefig(""../figure/nature_immuno_rate.pdf"",dpi = 300,transparent=True)"
+"0","plt.show()"

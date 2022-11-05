@@ -1,0 +1,32 @@
+"0","#python"
+"0","fig,ax = plt.subplots(figsize = (8,8))"
+"0","lw = 2"
+"0","ax.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')"
+"1","[<matplotlib.lines.Line2D object at 0x2c2893cd0>]
+"
+"0","ax.plot(kmer_result[0],kmer_result[1],label='TLimmuno2 : (AUC={0:.4f})'.format(kmer_result[4]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c2893fa0>]
+"
+"0","ax.plot(kmer_ba_result[0],kmer_ba_result[1],label='NetMHCIIpan_ba : (AUC={0:.4f})'.format(kmer_ba_result[4]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c2887970>]
+"
+"0","ax.plot(kmer_el_result[0],kmer_el_result[1],label='NetMHCIIpan_el : (AUC={0:.4f})'.format(kmer_el_result[4]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c28875e0>]
+"
+"0","ax.set_ylim([0,1.05])"
+"1","(0.0, 1.05)
+"
+"0","ax.set_xlim([0,1])"
+"1","(0.0, 1.0)
+"
+"0","ax.set_xlabel('False Positive Rate',fontsize = 14)"
+"1","Text(0.5, 0, 'False Positive Rate')
+"
+"0","ax.set_ylabel('True Positive Rate',fontsize = 14)"
+"1","Text(0, 0.5, 'True Positive Rate')
+"
+"0","ax.legend(loc=""lower right"",fontsize = 12)"
+"1","<matplotlib.legend.Legend object at 0x2c2839670>
+"
+"0","plt.savefig(""../figure/benchmark_kmer.pdf"",dpi = 300,transparent=True)"
+"0","plt.show()"

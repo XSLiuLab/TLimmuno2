@@ -1,0 +1,6 @@
+"0","net_kmer_ba = net_kmer_ba.rename(columns = {""prediction"":""net_prediction""})"
+"0","p_test_kmer = pd.merge(result_kmer,net_kmer_ba)"
+"0","z_score_kmer,p_val_kmer = DelongTest(p_test_kmer[""prediction""],100-p_test_kmer[""net_prediction""],p_test_kmer[""Immunogenicity""]).show_result()"
+"0","p_val_kmer"
+"1","0.3205095374068244
+"

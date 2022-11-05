@@ -1,0 +1,62 @@
+"0","#python"
+"0","Automate = pd.read_csv(""../data/Automated_benchmark.csv"")"
+"0","BA_result = pd.read_csv(""../data/BA_Automated_prediction_result.csv"".)"
+"2","SyntaxError: invalid syntax (<string>, line 1)
+"
+"0","BA_fpr,BA_tpr,_ = roc_curve(BA_result[""label""],BA_result[""prediction""],pos_label=1)"
+"2","NameError: name 'BA_result' is not defined
+"
+"0","BA_roc = auc(BA_fpr,BA_tpr)"
+"2","NameError: name 'BA_fpr' is not defined
+"
+"0","netMHC_result = pd.read_csv(""../data/netMHCIIpan_Auto_filter_ba_result.csv"")"
+"0","netMHC_result = netMHC_result[[""allele"",""percentile_rank"",""peptide"",""ic50""]]"
+"0","Automate = Automate[[""allele"",""allele1"",""peptide_sequence"",""measurement_value""]]"
+"0","netMHC_result = pd.merge(netMHC_result,Automate,left_on=[""allele"",""peptide""],right_on=[""allele"",""peptide_sequence""]).drop_duplicates()"
+"0","BA_allele = pd.read_csv(""../data/BA_allele.csv"",header=None,names=[""allele""])"
+"0","bool = netMHC_result[""allele1""].map(lambda x : x in BA_allele[""allele""].values)"
+"0","netMHC_result = netMHC_result[bool]"
+"0","net_fpr,net_tpr,_ = roc_curve(netMHC_result[""measurement_value""],1-netMHC_result[""percentile_rank""],pos_label=1)"
+"0","net_roc = auc(net_fpr,net_tpr)"
+"0","mix_result = pd.read_csv(""../data/mixMHC2pred_Auto_filter_ba_result.csv"")"
+"0","mix_data = pd.read_csv(""../data/mixMHC2pred_Automated.csv"")"
+"0","mix_result = pd.merge(mix_result[[""Peptide"",""BestAllele"",""%Rank_best""]],mix_data[[""Description"",""new_allele"",""label"",""Allele Name1""]],left_on =[""Peptide"",""BestAllele""],right_on=[""Description"",""new_allele""]).drop_duplicates()"
+"0","mix_result = mix_result[mix_result[""Allele Name1""].isin(BA_allele[""allele""])]"
+"0","mix_fpr,mix_tpr,_ = roc_curve(mix_result[""label""],1-mix_result[""%Rank_best""],pos_label=1)"
+"0","mix_roc = auc(mix_fpr,mix_tpr)"
+"0","cmap = plt.get_cmap('Set1')"
+"0","colors = [mpl.colors.rgb2hex(cmap(i)[:3]) for i in range(3)]"
+"0","fig,ax = plt.subplots(figsize = (8,8))"
+"0","lw = 2"
+"0","plt.plot(BA_fpr,BA_tpr,lw=lw,color = colors[0],label=""BA_model (AUC = %0.4f)"" % BA_roc,)"
+"2","NameError: name 'BA_fpr' is not defined
+"
+"0","plt.plot(net_fpr,net_tpr,lw=lw,color = colors[1],label=""NetMHCIIpan_BA (AUC = %0.4f)"" % net_roc,)"
+"1","[<matplotlib.lines.Line2D object at 0x2d3685fd0>]
+"
+"0","plt.plot(mix_fpr,mix_tpr,lw=lw,color = colors[2],label=""mixMHC2pred (AUC = %0.4f)"" % mix_roc,)"
+"1","[<matplotlib.lines.Line2D object at 0x2d36a57f0>]
+"
+"0","plt.plot([0, 1], [0, 1], color=""navy"", lw=lw, linestyle=""--"")"
+"1","[<matplotlib.lines.Line2D object at 0x2d36a50a0>]
+"
+"0","plt.xlim([0.0, 1.0])"
+"1","(0.0, 1.0)
+"
+"0","plt.ylim([0.0, 1.05])"
+"1","(0.0, 1.05)
+"
+"0","plt.xlabel(""False Positive Rate"",fontsize = 14,fontname='Arial')"
+"1","Text(0.5, 0, 'False Positive Rate')
+"
+"0","plt.ylabel(""True Positive Rate"",fontsize = 14)"
+"1","Text(0, 0.5, 'True Positive Rate')
+"
+"0","plt.title("""")"
+"1","Text(0.5, 1.0, '')
+"
+"0","plt.legend(loc=""lower right"",fontsize = 12)"
+"1","<matplotlib.legend.Legend object at 0x2825f3610>
+"
+"0","plt.savefig(""../figure/BA_model_benchmark.pdf"",dpi = 300,transparent=True)"
+"0","plt.show()"

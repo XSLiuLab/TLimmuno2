@@ -1,0 +1,35 @@
+"0","#python"
+"0","fig,ax = plt.subplots(figsize = (8,8))"
+"0","lw = 2"
+"0","ax.plot(mer15_result[2],mer15_result[3],label='TIMM2pred : (AUC={0:.4f})'.format(mer15_result[5]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c298dbe0>]
+"
+"0","ax.plot(IEDB_score[2],IEDB_score[3],label='IEDB : (AUC={0:.4f})'.format(IEDB_score[5]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c298d970>]
+"
+"0","ax.plot(Repitope_score[2],Repitope_score[3],label='Repitope : (AUC={0:.4f})'.format(Repitope_score[5]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c2985c40>]
+"
+"0","ax.plot(mer15_ba_result[2],mer15_ba_result[3],label='NetMHCIIpan_ba : (AUC={0:.4f})'.format(mer15_ba_result[5]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c29856d0>]
+"
+"0","ax.plot(mer15_el_result[2],mer15_el_result[3],label='NetMHCIIpan_el : (AUC={0:.4f})'.format(mer15_el_result[5]))"
+"1","[<matplotlib.lines.Line2D object at 0x2c29853a0>]
+"
+"0","plt.xlim([0.0, 1.0])"
+"1","(0.0, 1.0)
+"
+"0","plt.ylim([0.0, 1.05])"
+"1","(0.0, 1.05)
+"
+"0","plt.xlabel('Recall',fontsize = 14)"
+"1","Text(0.5, 0, 'Recall')
+"
+"0","plt.ylabel('Precision',fontsize = 14)"
+"1","Text(0, 0.5, 'Precision')
+"
+"0","plt.legend(loc=""upper right"",fontsize = 12)"
+"1","<matplotlib.legend.Legend object at 0x284a55520>
+"
+"0","plt.savefig(""../figure/15mer_PR.pdf"",dpi = 300,transparent=True)"
+"0","plt.show()"
