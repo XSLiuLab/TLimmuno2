@@ -1,5 +1,0 @@
-"0","#python"
-"0","MHC_dis_plot(BA_negative,""red"",""MHC"")"
-"0","plt.tight_layout()"
-"0","plt.savefig(""../figure/BA_MHC_negative.pdf"",dpi = 300,transparent=True)"
-"0","plt.show()"

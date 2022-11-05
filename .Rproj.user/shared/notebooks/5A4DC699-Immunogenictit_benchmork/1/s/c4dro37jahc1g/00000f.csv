@@ -1,6 +1,0 @@
-"0","net_15mer_ba = net_15mer_ba.rename(columns = {""prediction"":""net_prediction""})"
-"0","p_test_15mer = pd.merge(result_15mer,net_15mer_ba)"
-"0","z_score_15mer,p_val_15mer = DelongTest(p_test_15mer[""prediction""],100-p_test_15mer[""net_prediction""],p_test_15mer[""Immunogenicity""]).show_result()"
-"0","p_val_15mer"
-"1","0.42300443596273873
-"

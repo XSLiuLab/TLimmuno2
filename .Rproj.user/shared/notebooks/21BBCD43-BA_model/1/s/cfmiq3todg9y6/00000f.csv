@@ -1,5 +1,0 @@
-"0","#R"
-"0","BA_filtered_MHC[""label""] = ifelse(BA_filtered_MHC$IC50>0.426,1,0) #set positive and negative"
-"0","write_csv(BA_filtered_MHC,""../data/BA_MHC_label.csv"")"
-"0","BA_allele <- unique(BA_filtered_MHC$MHC)"
-"0","write_lines(BA_allele,""../data/BA_allele.csv"")"
