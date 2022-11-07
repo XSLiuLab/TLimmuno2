@@ -4,3 +4,4 @@ data/sim_add_cancer.rds
 .DS_Store
 .Rhistory
 .Rproj.user
+./report/.Rhistory

@@ -1,5 +1,5 @@
 ---
-title: "Need to wirte title"
+title: "TLimmuno2: predicting HLA class II antigen immunogenicity through transfer learning"
 author: ["Guangshuai Wang"]
 date: "`r Sys.Date()`"
 output:
@@ -277,7 +277,7 @@ class DelongTest():
 
 # TLimmno2
 
-```{r child = 'TLIMM2pred.Rmd',eval=TRUE}
+```{r child = 'TLimmuno2.Rmd',eval=TRUE}
 ```
 
 # Benchmark 

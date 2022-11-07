@@ -1,5 +1,5 @@
 ---
-title: "compare meachine learning"
+title: "Compare with another meachine learning and other deep learning methods"
 author: "Guangshuai Wang"
 date: "`r Sys.Date()`"
 output:   

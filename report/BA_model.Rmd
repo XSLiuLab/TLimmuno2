@@ -1,5 +1,5 @@
 ---
-title: "BA(binding affinity) model"
+title: "The construction process of the BA model"
 author: "Guangshuai Wang"
 date: "`r Sys.Date()`"
 output:   
@@ -539,6 +539,8 @@ print("finish")
 
 ### plt ROC fig
 
+
+
 ```{python ROC_curve}
 #python
 Automate = pd.read_csv("../data/Automated_benchmark.csv")
@@ -578,9 +580,26 @@ plt.savefig("../figure/BA_model_benchmark.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
+```{python}
+from collections import Counter
+fig,ax = plt.subplots(figsize = (8,8))
+sns.countplot(data = Automate,x = "measurement_value")
+ax.text(-0.1, 10950, "{:.3f}".format(Counter(Automate["measurement_value"])[0]/len(Automate)))
+ax.text(0.9, 10950, "{:.3f}".format(Counter(Automate["measurement_value"])[1]/len(Automate)))
+plt.ylabel("Number")
+plt.xlabel("label")
+plt.title("The distribution of different label in Automate")
+plt.savefig("../figure/Automate_label_dis.pdf",dpi = 300,transparent=True)
+plt.show()
+```
+
+```{r}
+1 - log(1000,base = 50000)
+```
+
 ```{python BA_confusion_matrix}
 #python
-BA_result["pre_label"] = BA_result["prediction"].map(lambda x : 1 if x>0.426 else 0)
+BA_result["pre_label"] = BA_result["prediction"].map(lambda x : 1 if x>0.362 else 0)
 BA_CM = confusion_matrix(BA_result["label"],BA_result["pre_label"])
 BA_CM = BA_CM/len(BA_result)
 netMHC_result["pre_label"] = netMHC_result["percentile_rank"].map(lambda x : 1 if x <10 else 0)
@@ -593,7 +612,7 @@ fig,ax = plt.subplots(figsize = (8,6))
 sns.heatmap(BA_CM, annot=True,cmap="YlGnBu",vmin=0, vmax=0.6)
 plt.ylabel("True label")
 plt.xlabel("Prediction label")
-plt.title("BA model confusion matrix(threshold:0.426)")
+plt.title("BA model confusion matrix(threshold:0.362)")
 plt.savefig("../figure/BA_CM.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
