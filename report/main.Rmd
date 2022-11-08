@@ -1,5 +1,5 @@
 ---
-title: "TLimmuno2: predicting HLA class II antigen immunogenicity through transfer learning"
+title: "TLimmuno2: predicting MHC class II antigen immunogenicity through transfer learning"
 author: ["Guangshuai Wang"]
 date: "`r Sys.Date()`"
 output:
