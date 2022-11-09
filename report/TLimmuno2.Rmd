@@ -1,5 +1,5 @@
 ---
-title: "The construction process of the TLimmuno2 model"
+title: "TLimmno2: MHC II immunogenicity prediction network based on transfer learning"
 author: "Guangshuai Wang"
 date: "`r Sys.Date()`"
 output:   
@@ -41,9 +41,16 @@ path = "~/Project/Documenet/TLIMM2pred/data/"
 import random
 ```
 
+This part focuses on Binding affinity (BA) model construction. it contains the following sections:
+
+- [Training data](#training-data) - Data download and process
+- [BA model](#ba-model-training) - constructed BA model by LSTM
+- [BA model perforemance](#ba-model-perforemance) - Compared the performance of BA model with other models on independent dataset.
+
+
 ## Data preprocessing
 
-IEDB training set: we think ;this five assay type is more credible, so we choose this five assay type.
+Immunogenicity molecular assays were downloaded from the Immune Epitope Database (IEDB) on May 15, 2022. The following keywords were used: Linear peptide; T cell; Include positive and negative; Human and any disease. We next used strict criteria for data cleaning. First, data instances without explicit 4-digit MHC alleles were discarded. Second, the length of the peptides is limited in the range of 13-21 mer. Third, the data with low confidence (no information in number of subjects tested/responded) were removed. Finally, we chose five experiment types, “51 chromium”, “ELISA”, “ELISPOT”, “ICS” and “multimer/tetramer” to train model as the reason of we think these are more reliable. The rest of experiment types is used for model benchmark. In the final, we got 3930 positive instances and 2478 negative instances for training, and 105 positive instances and 4 negative instances for benchmark.
 
 ```{r IMM-data,message=FALSE}
 #R
@@ -86,6 +93,26 @@ ggplot(data = IEDB_immuno_MHCII_filter_final)+
 ggplot(data = IEDB_immuno_MHCII_filter_final)+
   geom_histogram(aes(x = `Qualitative Measure`),stat = "count")+xlab("Label")+ylab("Number") + labs(title = "IEDB")+ theme(plot.title = element_text(hjust = 0.5))
 ```
+
+data for benchmark:
+
+```{r IEDB-benchmark}
+#R
+IEDB_immuno_MHCII_filter2 <- IEDB_immuno_MHCII_filter %>% filter(nchar(`Allele Name`)>=14) %>% filter(length>=13&length<=21) %>% 
+  filter(!(`Method/Technique`=="51 chromium"|`Method/Technique`=="ELISA"|`Method/Technique`=="ELISPOT"|`Method/Technique`=="ICS"|`Method/Technique`=="multimer/tetramer")) %>% 
+  filter(str_detect(`Allele Name`,"HLA"))
+
+IEDB_immuno_MHCII_filter2$`Allele Name1` <- sapply(IEDB_immuno_MHCII_filter2$`Allele Name`,fun)
+IEDB_immuno_MHCII_filter2 <- left_join(IEDB_immuno_MHCII_filter2,pseduo_seq, by = c("Allele Name1" = "allele"))
+IEDB_immuno_MHCII_benchmark <-  na.omit(IEDB_immuno_MHCII_filter2) # only response
+IEDB_immuno_MHCII_benchmark <- IEDB_immuno_MHCII_benchmark[!(duplicated(IEDB_immuno_MHCII_benchmark[,c(1,4)])),]
+bool1 <- IEDB_immuno_MHCII_benchmark$Description %in% IEDB_immuno_MHCII_filter_final$Description
+bool2 <- IEDB_immuno_MHCII_benchmark$`Allele Name` %in% IEDB_immuno_MHCII_filter_final$`Allele Name`
+IEDB_immuno_MHCII_benchmark_final <- IEDB_immuno_MHCII_benchmark[bool1&bool2,]
+write_csv(IEDB_immuno_MHCII_benchmark_final,"../data/IEDB_benchmark.csv")
+```
+
+We also analyzed the distribution of HLA types in the immunogenicity data and found that it has a similar distribution to the Binding affinity data, and the peptides with a length of 15mer accounted for the largest proportion.
 
 ```{python}
 IMM_data = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_train/IEDB_MHCII_immuno.csv")
@@ -141,29 +168,9 @@ plt.savefig("../figure/length.pdf",dpi = 300,bbox_inches='tight',transparent=Tru
 plt.show()
 ```
 
-IEDB bechmark data: reduce duplicates data in training dataset
-
-```{r IEDB-benchmark}
-#R
-IEDB_immuno_MHCII_filter2 <- IEDB_immuno_MHCII_filter %>% filter(nchar(`Allele Name`)>=14) %>% filter(length>=13&length<=21) %>% 
-  filter(!(`Method/Technique`=="51 chromium"|`Method/Technique`=="ELISA"|`Method/Technique`=="ELISPOT"|`Method/Technique`=="ICS"|`Method/Technique`=="multimer/tetramer")) %>% 
-  filter(str_detect(`Allele Name`,"HLA"))
-
-IEDB_immuno_MHCII_filter2$`Allele Name1` <- sapply(IEDB_immuno_MHCII_filter2$`Allele Name`,fun)
-IEDB_immuno_MHCII_filter2 <- left_join(IEDB_immuno_MHCII_filter2,pseduo_seq, by = c("Allele Name1" = "allele"))
-IEDB_immuno_MHCII_benchmark <-  na.omit(IEDB_immuno_MHCII_filter2) # only response
-IEDB_immuno_MHCII_benchmark <- IEDB_immuno_MHCII_benchmark[!(duplicated(IEDB_immuno_MHCII_benchmark[,c(1,4)])),]
-bool1 <- IEDB_immuno_MHCII_benchmark$Description %in% IEDB_immuno_MHCII_filter_final$Description
-bool2 <- IEDB_immuno_MHCII_benchmark$`Allele Name` %in% IEDB_immuno_MHCII_filter_final$`Allele Name`
-IEDB_immuno_MHCII_benchmark_final <- IEDB_immuno_MHCII_benchmark[bool1&bool2,]
-write_csv(IEDB_immuno_MHCII_benchmark_final,"../data/IEDB_benchmark.csv")
-```
-
-## Model train
-
-we compare 1,2,3,4,5 and 10 times random nagative peptide, we found 2 times random nagative peptide is more acccuracy. so we use 2 times random negative peptide to train model.
-
 ### Get random peptide as decoay
+
+In our data, we found that the percentage of data with immunogenic peptides is more than the percentage of data without immunogenicity. The reason for this problem is that the data without response information (number of subjects tested/responded) in the IEDB dataset are also considered as negative peptides and we removed them during data cleaning. To avoid this anomaly, we used all human peptide sequence download from the universal protein knowledgebase (UniProt) database (2022.3) to get random artificial negative peptides. We generated 2 times and 5 times random peptides for each length of each MHC allele as negative instances to construct IEDB-training dataset and IEDB-benchmark dataset.
 
 ```{python random_peptide,eval = FALSE}
 #python
@@ -194,7 +201,7 @@ def random_select(x,length,num,allele):
 IMM_data = pd.read_csv("../data/IEDB_MHCII_immuno.csv")
 negative = []
 allele = []
-time = 2 # negative times
+time = 2 # negative times, 2 for IEDB-training and 5 for IEDB-benchmark
 for i in range(time):
     for i in IMM_data["Allele Name1"].unique():
         smal_IMM = IMM_data[IMM_data["Allele Name1"] == i]["length"].value_counts()
@@ -217,9 +224,10 @@ Data = pd.merge(final_data,pseudo_data).drop_duplicates()
 #Data.to_csv("../data/IMM_data_random{}.csv".format(time))
 ```
 
-because random select, it maybe different to our final data.
 
-### model train
+## Model train
+
+We employed transfer learning to add binding affinity information by extract penultimate layer of BA model. We also used LSTM layers to get antigen and MHC information, because we found our model got a great significant improvement by using this method. We concatenated the three numerical vectors into a single layer, added a dense layer with 400 neurons activated by RELU, a dense layer with 200 neurons activated by RELU and the last layer with a single neuron with sigmoid activation.We named the final model of MHC II immunogenicity prediction network based on transfer learning as “TLimmuno2”.
 
 ```{python train-model ,eval = FALSE}
 #PBS
@@ -436,23 +444,89 @@ plt.savefig("/public/slst/home/wanggsh/Project/Saved_model/Model_fig/Immuno_mode
 print("Finish")
 ```
 
-### model perfoemance
+TLimmuno2 outputs a continuous variable between 0 and 1 and also percentile rank. For each peptide-MHC II pair, percentile ranks were computed based on a dataset of 90,000 13- to 21-mer peptides (10,000 for each length) randomly selected from the human proteome, smaller rank indicates stronger immunogenicity
 
-cross ROC, PR
+```{python, eval = FALSE}
+#PBS
+#python
+
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+import sys
+sys.path.append("/public/slst/home/wanggsh/Project/MHCII/utils")
+from Blosum62 import blosum62
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="-1" 
+#load_model
+
+BA_model = tf.keras.models.load_model("/public/slst/home/wanggsh/Project/Saved_model/new_BA_model/model1")
+BAmodel = tf.keras.models.Model(inputs = BA_model.input,outputs = BA_model.layers[-2].output)
+IMM = tf.keras.models.load_model("/public/slst/home/wanggsh/Project/Saved_model/MHCII_immuno/model")
+
+Data = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/kmer_data.csv")
+Data["pep_blosum"] = Data["pep"].apply(blosum62,args=(21,))
+Data["MHC_blosum"] = Data["sequence"].apply(blosum62,args=(34,))
+peptide = np.empty((len(Data),21,21))
+for i in range(len(Data)):
+    peptide[i] = Data["pep_blosum"][i].reshape((21,21))
+#mhc
+MHC = np.empty((len(Data),34,21))
+for i in range(len(Data)):
+    MHC[i] = Data["MHC_blosum"][i].reshape((34,21))
+
+BA = BAmodel.predict([peptide,MHC])
+IMM_result = IMM.predict([peptide,MHC,BA])
+Data["prediction"] = IMM_result
+
+pseudo_seq = pd.read_feather("/public/slst/home/wanggsh/Data/pseudo_blosum62.feather")
+
+#background pep
+IMM_bg_pep = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/IMM_bg_pep.csv")
+IMM_bg_pep["pep_blosum"] = IMM_bg_pep["pep"].apply(blosum62,args=(21,))
+DF = pd.DataFrame()
+for i in Data["HLA"].unique():
+    IMM_bg_pep["MHC"] = i
+    x = pd.merge(IMM_bg_pep,pseudo_seq[["MHC","MHC_blosum"]])
+    peptide = np.empty((len(x),21,21))
+    for z in range(len(x)):
+        peptide[z] = x["pep_blosum"][z].reshape((21,21))
+    MHC = np.empty((len(x),34,21))
+    for z in range(len(x)):
+        MHC[z] = x["MHC_blosum"][z].reshape((34,21))
+    BA = BAmodel.predict([peptide,MHC])
+    IMM_result = IMM.predict([peptide,MHC,BA])
+    IMM_result = IMM_result.tolist()
+    y = Data[Data["HLA"]== i]
+    Rank = []
+    for I in y["prediction"].values:
+        IMM_result.append(I)
+        rank = 1-(sorted(IMM_result).index(IMM_result[-1])+1)/90001
+        Rank.append(rank)
+        IMM_result.pop()
+    y["Rank"] = Rank
+    DF = pd.concat([DF,y])
+DF.pop("pep_blosum")
+DF.pop("MHC_blosum")
+DF.to_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/kmer_rank_result.csv")
+print("finish") 
+```
+
+## Model perfoemance
+
+We first divided the data set into training and test sets by the ratio of 9:1 for model training and testing. To verify the stability of the model, 5-fold cross-validation was applied in the training process of TLimmuno2, and TLimmuno2 shows highly stable AUC (average 0.8727) across the validations . Overall, TLimmuno2 reaches AUC=0.9909 in training dataset and AUC=0.8648 in the test dataset .
 
 ![cross ROC](./figure/TLimmuno2_cross_ROC.png)
 
 ![cross PR](./figure/TLimmno2_cross_PR.png)
 
-ROC,PR
-
 ![ROC](./figure/TLimmuno2_ROC.png)
 
 ![PR](./figure/TLimmuno2_PR.png)
 
-## mdoel bechmark
-we ues IEDB data to compare TLIMM2pred and netMHCIIpan BA,EL model.  这一步不行，因为数据没有去重，去重之后数据也太少了。
-经过了去重，并增加了5倍的阴性样本，查看了模型的表现效果，发现自己的结果更好。
+## Initial benchmark
+
+To compare with existing tools, we performed benchmark study by using independent datasets. We first used the IEDB-benchmark dataset (Methods) to compare the performance of TLimmuno2 and NetMHCIIpan BA/EL model. This dataset contains 105 immunogenicity peptides, 4 non-immunogenicity peptides and 5 times randomly selected human non-immunogenicity peptides. In this and all of the following validation processes, data that appeared in the training dataset were removed and thus were completely independent of the training set. TLimmuno2 shows much better performance (AUC: 0.9145) compared with NetMHCIIpan in this independent dataset (BA AUC = 0.7416, EL AUC = 0.7194).
 
 ```{python }
 #python

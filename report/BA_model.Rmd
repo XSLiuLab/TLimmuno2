@@ -37,17 +37,17 @@ from sklearn.metrics import roc_curve,auc,precision_score,recall_score
 import matplotlib as mpl
 ```
 
-This part focuses on BA model construction, it contains the following sections:
+This part focuses on Binding affinity (BA) model construction. it contains the following sections:
 
 - [Training data](#training-data) - Data download and process
-- [BA model](#ba-model) - constructed BA model by LSTM
+- [BA model](#ba-model-training) - constructed BA model by LSTM
 - [BA model perforemance](#ba-model-perforemance) - Compared the performance of BA model with other models on independent dataset.
 
 ## Training data 
 
 ### Data download
 
-The training data come form NetMHCIIpan 4.0，you can find the data in [IEDB](http://tools.iedb.org/mhcii/download/), the details are described as below:
+The same binding affinity data used for training NetMHCIIpan were used to train our model，you can find the data in [IEDB](http://tools.iedb.org/mhcii/download/), the details are described as below:
 
 1.data processing: combine & drop duplicates
 
@@ -76,6 +76,8 @@ BA_filtered_MHC <- unique(BA_filtered_MHC)
 dim(BA_filtered_MHC)
 length(table(unique(BA_filtered_MHC$MHC)))
 ```
+
+These data comprise 107,008 measurements of peptide–MHC binding affinity covering 71 types of class II MHCs from humans.
 
 2.change normalized IC50 to binary label: IC50 is normalized by log50k transformed binding affinity (i.e. 1 - log50k( aff nM)) method, and a threshold of 500 nM is used. This means that peptides with log50k transformed binding affinity values greater than 0.426 are classified as binders(true label: 1)
 
@@ -111,7 +113,10 @@ def MHC_dis_plot(Data,color,colname):
     plt.xticks(rotation = 90)
 ```
 
+we show the distribution of allele in different labels:
+
 ```{python}
+#python
 MHC_dis_plot(BA_positive,"green","MHC")
 plt.tight_layout()
 plt.savefig("../figure/BA_MHC_positive.pdf",dpi = 300,transparent=True)
@@ -126,6 +131,8 @@ plt.savefig("../figure/BA_MHC_negative.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
+The converted affinity value of negative samples is around 0.2, while that of positive samples is around 0.6:
+
 ```{python BA-boxplot}
 #python
 sns.boxplot(data = BA,x="label",y="IC50")
@@ -137,6 +144,8 @@ plt.xticks((0,1),labels = ["Negative","Positive"])
 plt.savefig("../figure/BA_label_boxplot.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
+
+15mer peptides account for the largest proportion of Binding affinity data.
 
 ```{python BA-immuno-rate}
 #python
@@ -160,12 +169,17 @@ plt.savefig("../figure/length_dis_label.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
-## BA model 
+## BA model training
+
+Unlike NetMHCIIpan4.0, we use the LSTM layer to construct our model. Antigen sequences and MHC pseudo-sequences are used as inputs. We used two LSTM layers with output sizes of 128,64 on top of the antigen and MHC inputs. The LSTM outputs of antigen and MHC are concatenated in the same layer to form a 128-dimensional vector. This layer is followed by three dense layers with 100, 50, and 10 neurons activated by RELU, and the last output layer is a single neuron dense layer activated by sigmoid.
+
+The input of this model is the peptides sequence and the MHC sequence. The output is whether the peptides bind to the MHC molecule or not. We used 5-fold cross-validation and the training results are shown in training histrory.
 
 ### Structure
 
 ```{python model-structure,eval = FALSE}
 #PBS
+#python
 import pandas as pd
 import numpy as np
 import tensorflow as tf
@@ -377,12 +391,13 @@ print("finish")
 
 ### train history fig
 
-cross validation
+cross validation: The training results of the model are very stable, the average AUC of ROC is 0.97, and the average AUC of PR is 0.96.
 
 ![BA corss ROC](./figure/BA_ROC_cross.png)
+
 ![BA cross PR](./figure/BA_PR_cross.png)
 
-held out dataset
+held out dataset: 
 
 ![BA ROC](./figure/BA_ROC.png)
 
@@ -390,9 +405,11 @@ held out dataset
 
 ## BA model perforemance
 
-### benchmark data preprecess
+We compare the performance of our BA with other models on an independent dataset. we compare [netMHCIIpan 4.0 BA](http://tools.iedb.org/mhcii/download/) and [mixMHC2pred](https://github.com/GfellerLab/MixMHC2pred).
 
-benchmark dataset: Automated
+### Benchmark data preprecess
+
+We collected independent datasets named Automated from Andreatta et al. and drop duplicated data with training dataset. we also change binding affinity into binary label by log50k transformed method.
 
 ```{r Automated-data,message=FALSE}
 #R
@@ -432,13 +449,17 @@ write_csv(Dataset_final,"../data/Automated_benchmark.csv")
 write_csv(Automated_filter,"../data/Automated_benchmark_filter.csv")
 ```
 
+The Automated dataset are shown below：
+
 ```{r BA-show-data}
 DT::datatable(Automated_filter,rownames = FALSE)
 ```
 
-### run BA,netMHCIIpan,mixMHC2pred get result
+### Run and  result
 
-BA model:
+The process of using the different tools is shown below, all processes are done on HPC.
+
+BAmodel:
 
 ```{python BA-auto-result,eval = FALSE}
 #python
@@ -470,7 +491,7 @@ BA_result = Data
 BA_result.to_csv("/public/slst/home/wanggsh/Data/MHCII/Benchmark/BA_model/BA_Automated_prediction_result.csv")
 ```
 
-netMHCIIpan:
+NetMHCIIpan:
 
 ```{python netMHCIIpan_BA_result,eval = FALSE}
 #python
@@ -537,9 +558,9 @@ PD.to_csv("{0}/mixMHC2pred_Auto_filter_ba_result.csv".format(result_file_path))
 print("finish")
 ```
 
-### plt ROC fig
+### Plt ROC fig
 
-
+The area under the curve (AUC) of the receiver operating characteristic (ROC) is used as the evaluation index for model comparations:
 
 ```{python ROC_curve}
 #python
@@ -579,6 +600,10 @@ plt.legend(loc="lower right",fontsize = 12)
 plt.savefig("../figure/BA_model_benchmark.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
+
+The BA model (AUC: 0.7742) shows better performance than MixMHC2pred (AUC: 0.6482) and has comparable performance with NetMHCIIpan (AUC: 0.7965). 
+
+Next we plot the confusion matrix：
 
 ```{python}
 from collections import Counter
@@ -639,7 +664,9 @@ plt.savefig("../figure/mixMHC2pred_CM.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
-```{python pre_recall_fig}
+By using IEDB recommend cutoff 10%rank and 0.362 (1000nm, log50k transformed), we found NetMHCIIpan and MixMHC2pred tend to predict the result as negative while our BA model can correctly distinguish between negatives and positives
+
+```{python pre_recall_fig, include = FALSE}
 #python
 BA_precision = precision_score(BA_result["label"],BA_result["pre_label"])
 BA_recall = recall_score(BA_result["label"],BA_result["pre_label"])
@@ -656,3 +683,4 @@ plt.ylabel("Score")
 plt.savefig("../figure/pre_recall.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
+

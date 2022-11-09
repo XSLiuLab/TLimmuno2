@@ -1,5 +1,5 @@
 ---
-title: "Immunoeniting signal detect"
+title: "TLimmuno2 can learn important features that determine immunogenicity"
 author: "Guangshuai Wang"
 date: "`r Sys.Date()`"
 output:   

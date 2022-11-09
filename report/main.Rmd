@@ -73,7 +73,7 @@ Shell:
 
 Here are some common scripts used in our project:
 
-> Of note, some step was done on Linux server provided by High Performance Computing(HPC) Service of ShanghaiTech University in order to reduce run time. So some scripts was sunmitted by using PBS(Portable Bash Script) scripts, we will mark them in the header by using `#PBS`. Also, there are mixture of R and Python, if readers want to reproduce this work, please focus on the key code lines.
+> Of note, some step was done on Linux server provided by High Performance Computing(HPC) Service of ShanghaiTech University in order to reduce run time. So some scripts was sunmitted by using Portable Bash Script (PBS) scripts, we will mark them in the header by using `#PBS`. Also, there are mixture of R and Python, if readers want to reproduce this work, please focus on the key code lines.
 
 1.PBS script format: we change `name`, `out file path` and `python file` in different work in order to submit it into HPC. File submitted by PBS will not be compiled by this report.
 
@@ -96,7 +96,7 @@ conda activate tensorflow
 python <Python file>
 ```
 
-2.Blosum62 encoder: we use blosum62 matrix to encoder peptide and MHC pseudo-sequence into numeric. Blosum62 Matrix were download from [NCBI website](https://www.ncbi.nlm.nih.gov/Class/FieldGuide/BLOSUM62.txt). The animo acid alphabet is **ACDEFGHIKLMNPQRSTVWYX**, **X** is the general wildcard character. You can find these content in [USCS](https://compbio.soe.ucsc.edu/papers/sam_doc/node9.html) and [Mathworks](https://ww2.mathworks.cn/help/bioinfo/ref/aminolookup.html). The following is the script:
+2.BLOSUM62 encoder: we use BLOSUM62 matrix to encoder peptides and MHC pseudo-sequence into numeric. Blosum62 Matrix were download from [NCBI website](https://www.ncbi.nlm.nih.gov/Class/FieldGuide/BLOSUM62.txt). The animo acid alphabet is **ACDEFGHIKLMNPQRSTVWYX**, **X** is the general wildcard character. You can find these content in [USCS](https://compbio.soe.ucsc.edu/papers/sam_doc/node9.html) and [Mathworks](https://ww2.mathworks.cn/help/bioinfo/ref/aminolookup.html). The following is the script:
 
 ```{python blosum62 ,eval = FALSE}
 #python
@@ -154,7 +154,7 @@ python <Python file>
     print("{} submitted".format(i))
 ```
 
-4.Background sequence: we download all human peptide sequence from UniPort database(2022.3) and randomly sampling peptides. We generated a set of 90,000 13--21-mer random natural peptides (10,000 of each length). The result maybe different as the reason of random select.
+4.Background sequence: TLimmuno2 outputs a continuous variable between 0 and 1 and also percentile rank. we download all human peptide sequence from UniPort database(2022.3) and randomly sampling peptides. We generated a set of 90,000 13-21-mer random natural peptides (10,000 of each length). For each peptide-MHC II pair, percentile ranks were computed based on background sequence, smaller rank indicates stronger immunogenicity..The result maybe different as the reason of random select.
 
 ```{python random-bg-pep, eval = FALSE}
 #python
@@ -191,7 +191,7 @@ for i in range(13,21):
     pep,all = random_select(uniport_random,i,10000,"ALL")
     Pep.extend(pep)
 IMM_bg_pep = pd.DataFrame({"pep":Pep})
-IMM_bg_pep.to_csv("../data/IMM_bg_pep.csv")
+#IMM_bg_pep.to_csv("../data/IMM_bg_pep.csv")
 ```
 
 5.ROC significant: we calculated the p-value between the two ROC's by Delong's test.
@@ -270,27 +270,27 @@ class DelongTest():
 ```
 
 
-# BA model
+# The construction process of the BA model
 
 ```{r child = 'BA_model.Rmd',eval=TRUE}
 ```
 
-# TLimmno2
+# TLimmno2: MHC II immunogenicity prediction network based on transfer learning
 
 ```{r child = 'TLimmuno2.Rmd',eval=TRUE}
 ```
 
-# Benchmark 
+# TLimmuno2 outperforms existing methods in peptide-MHC II immunogenicity prediction
 
 ```{r child = 'Immunogenictit_benchmork.Rmd', eval=TRUE}
 ```
 
-# Another machine learning
+# Compare with another meachine learning and other deep learning methods
 
 ```{r child = 'another_machinelearning.Rmd', eval=TRUE}
 ```
 
-# Immunoediting
+# TLimmuno2 can learn important features that determine immunogenicity
 
 ```{r child= "immunoediting.Rmd"}
 ```

@@ -1,5 +1,5 @@
 ---
-title: "Validation of TLimmuno2"
+title: "TLimmuno2 outperforms existing methods in peptide-MHC II immunogenicity prediction"
 author: "Guangshuai Wang"
 date: "`r Sys.Date()`"
 output:   
@@ -40,7 +40,11 @@ sys.path.append("../Python")
 from Delongtest import DelongTest
 ```
 
-we compare with another immunogenicity preditced tools
+This part focuses on another independent . it contains the following sections:
+
+- [Training data](#training-data) - Data download and process
+- [BA model](#ba-model-training) - constructed BA model by LSTM
+- [BA model perforemance](#ba-model-perforemance) - Compared the performance of BA model with other models on independent dataset.
 
 ## Benchmark in immunoigenicity
 
