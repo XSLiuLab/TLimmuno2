@@ -40,17 +40,19 @@ sys.path.append("../Python")
 from Delongtest import DelongTest
 ```
 
-This part focuses on another independent . it contains the following sections:
+This part focuses on another independent dataset to compare the performance of TLimmuno2. it contains the following sections:
 
-- [Training data](#training-data) - Data download and process
-- [BA model](#ba-model-training) - constructed BA model by LSTM
-- [BA model perforemance](#ba-model-perforemance) - Compared the performance of BA model with other models on independent dataset.
+- [Benchmark in immunoigenicity](#benchmark-in-immunoigenicity)
+- [Structure immportance](#structure-immportance)
+- [Neoepitope and wildtype peptide](#neoepitope-and-wildtype-peptide)
+- [Position importance](#position-importance)
 
 ## Benchmark in immunoigenicity
 
-### Data proprecessing
+the IEDB-Benchmark dataset is from the same database as the training set, thus they may have similar distribution patterns, which may lead to systematic bias. To perform an unbiased performance evaluation in predicting immunogenic peptides, we retrieved published papers to collect neoepitopes that were tested experimentally for CD4+ T cell immunogenicity.
 
-form nature data, sub k-mer method
+
+### Data proprecessing
 
 ```{python}
 #python
@@ -78,6 +80,10 @@ ax.text(0.9, 90, "{:.3f}".format(80/931))
 plt.savefig("../figure/nature_immuno_rate.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
+
+Neoepitopes tested experimentally were usually sequences of 20–25 amino acids, so we use 15-mer and k-mer methods (Methods) to assign a rank value to a given neoepitope.
+
+For the 15mer method, we split one neoepitope sequence into 15 subsequences and score or rank each subsequence. In the kmer method, neoepitopes were cut into 13-21-mers subsequence. The prediction of the neoepitope is the maximum score or the minimum ranking of the predicted results of all subsequences by different methods. In case of a neoepitope with multiple MHC types, we used the maximum score or minimum rank of prediction for different MHC types as the prediction result for the neoepitope.
 
 ```{python}
 #python
@@ -130,15 +136,17 @@ benchmark_data = pd.merge(DF_k,pseudo_seq)
 benchmark_data.to_csv("../data/kmer_data.csv")
 ```
 
-### run
+### Different tools
 
-#### IEDB
+We also compared the performance of TLimmuno2 with other immunogenicity prediction tools, including IEDB tool (CD4episcore) and Repitope. Note some published methods, such as Deepitope and FIONA do not have the tools publicly available, and are thus not included in the subsequent comparison analysis. we can't link their website for FIONA and we can't find the Github repositories for Deepitope.
 
-[IEDB onoline prediction](http://tools.iedb.org/CD4episcore/)
+#### IEDB online tool(CD4episcore)
+
+we run IEDB in their website [IEDB online tool](http://tools.iedb.org/CD4episcore/), and this tool only support 15mer peptides.
 
 #### Repitope
 
-[Repitope](https://github.com/masato-ogishi/Repitope)
+You can find the [Repitope](https://github.com/masato-ogishi/Repitope) in their Github, This tool is very slow and potentially problematic on larger datasets, so we only used 15mer peptides.
 
 ```{r,eval=FALSE}
 #PBS
@@ -176,11 +184,11 @@ res_MHCII <- EpitopePrioritization(
 
 #### netMHCIIpan BA&EL
 
-This part code is similar to (添加饮用), only chage the input and output file, so we don't add code in this part.
+This part code is similar to the IEDB-benchmark dataset, only change the input and output file, so we don't add code in this part.
 
 #### TLimmuno2
 
-This part code is similar to (添加饮用), only chage the input and output file, so we don't add code in this part.
+This part code is similar to the IEDB-benchmark dataset, only change the input and output file, so we don't add code in this part.
 
 ### Result
 
@@ -349,6 +357,7 @@ print("EL AUC: {}".format(kmer_el_result[4]))
 print("EL PR_AUC: {}".format(kmer_el_result[5]))
 ```
 
+In these comparisons, TLimmuno2 shows the best performance both in the 15-mer method and the k-mer method. Repitope and IEDB tools evaluate epitope immunogenicity using population MHC information, not considering the personalized MHC allele information, and have a poor performance in these comparisons.
 
 ```{python 15mer_ROC_fig}
 #python
@@ -467,11 +476,10 @@ for i,l in enumerate(CM_all):
   CM_plot(l,CM_label[i])
   
 ```
-## another benchmark
 
-### structure immportance
+## Structure immportance
 
-we compare TLIMM2perd, TLimmuno2_noba, and TLimmuno2_onlyba model structure, and we found TLimmuno2 is significant improment than others.
+Similarly, we want to demonstrate the impact of transfer learning on TLimmuno2, so we reconstructed two models, only BA and without BA. For the only BA model, its input layer contains only the transfer output of the BA model, while for the without BA, we masked the BA model and only the LSTM layer left. The detail code of this part is not inclued in the report. In independent validation datasets, the performance of these two models is significant decreased compared with TLimmuno2. These results demonstrated that the transfer learning approach improves the predictive power of TLimmuno2 in peptide-MHC II immunogenicity prediction.
 
 ```{python}
 kmer_no_ba = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/kmer_no_ba_result.csv")
@@ -546,7 +554,9 @@ plt.show()
 ```
 
 
-### true neoantigen
+## Neoepitope and wildtype peptide 
+
+To further demonstrate the discriminative power of TLimmuno2, we collected 52 MHC II neoepitopes and their corresponding wild-type peptides from published papers . These neoepitopes have been experimentally shown to elicit T cell responses. For each neoantigen and its corresponding wild-type peptide, we predicted the immunogenicity rank values by TLimmuno2. As shown in Figure below, the TLimmuno2 predicted immunogenicity rank values of mutant neopeptides are significantly lower than those of wild-type peptides, and this demonstrates the strong ability of TLimmuno2 in recognizing real neoepitope, even if the neoepitope differs from its wild-type peptide by only one amino acid.
 
 ```{python neoantigen}
 #python
@@ -581,9 +591,11 @@ plt.savefig("../figure/neoantigen.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
-### position importance
+## Position importance
 
-#### run
+### TLimmuno2
+
+We performed in silico mutational analyses to investigate whether TLimmuno2 was able to learn the molecular characteristics of the peptide. By changing the amino acid residues at each position, we compare the differences of the predicted values, and the largest decrease corresponds to the greater importance of the position. We do this in two methods: ala-scanning and zero-setting. For ala-scanning, we sequentially replaced each position as the alanine; for zero-setting, we sequentially mutated each position (the representation vector for the mutated position is all zeros). We simulated this process 100 times and an ascending ranking was performed each time to highlight the most salient positions. 
 
 ```{python, eval = FALSE}
 #python
@@ -600,14 +612,12 @@ import matplotlib as mpl
 import os
 #os.environ["CUDA_VISIBLE_DEVICES"]="-1" 
 
-
 immuno_data = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/IMM_data_random2.csv")
 immuno_data = immuno_data[immuno_data["label"] == 1]
 immuno_data["length"] = immuno_data["Description"].map(len)
 #choose 15mer
 immuno_data = immuno_data[immuno_data["length"] == 15]
 immuno_data = immuno_data.reset_index(drop=True)
-
 
 immuno_data["pep_blosum"] = immuno_data["Description"].apply(blosum62,args=(21,))
 immuno_data["MHC_blosum"] = immuno_data["sequence"].apply(blosum62,args=(34,))
@@ -668,7 +678,7 @@ for m in range(n):
     position_rank[m,:] = tmp
 np.save("/public/slst/home/wanggsh/Data/MHCII_immuno/position_importance/position_ala.npy",position_rank)
 ```
-#### result
+#### plt figure
 
 ```{python, message = FALSE }
 #python
@@ -721,9 +731,11 @@ plt.savefig("../figure/position_ala.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
+Both results show that P4 (residue 4), P5, and P6 are very important for model prediction. This result is consistent with the results related to MHC class I molecules, and it is reported that these positions are essential for interacting with the TCR. But unlike MHC I molecules, MHC II molecules exhibit a tendency to have less effect on model predictions due to its position closer to the tail, possibly due to its open binding cleft. The results of Ala-scanning are more stable rather than zero-setting, because Ala also has biological functions.
+
 ### BA model
 
-we also do the same things in BA model.
+we also do the same things by using BA model.
 
 ```{python,eval = FALSE}
 import pandas as pd
@@ -851,3 +863,5 @@ ax.add_artist(leg1)
 plt.savefig("../figure/position_ala_BA.pdf",dpi = 300,bbox_inches='tight',transparent=True)
 plt.show()
 ```
+
+Furthermore, the BA model does not show the same trend, it is possible that the features learned by the affinity prediction model are the interaction between MHC and peptide compared to the features learned by the immunogenicity prediction model.

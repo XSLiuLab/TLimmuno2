@@ -39,6 +39,13 @@ from sklearn.metrics import roc_auc_score,make_scorer
 scorer = make_scorer(roc_auc_score)
 ```
 
+To further investigate the importance of model structure to TLimmuno2 performance, we used other model architectures and compared their performance. We constructed four traditional machine learning classification models (AdaBoost, KNN, Random Forest, and SVM) and tuned their hyperparameters by cross-validation. In addition, we constructed deep learning models of deep neural network (DNN) and convolutional neural network (CNN). All models were trained using the same data. We validated these models in our curated neoepitope dataset. 
+
+- [Data process](#data-process)
+- [Machine learning](#machine-learning)
+- [Deep learning](#deep-learning)
+- [Result](#result)
+
 ```{python}
 from sklearn.metrics import roc_auc_score,make_scorer 
 scorer = make_scorer(roc_auc_score)
@@ -122,7 +129,7 @@ def method(estimator):
     return holding
 ```
 
-## data process
+## Data process
 
 ```{python,eval = FALSE}
 peptide = pd.read_csv("../data/peptide.csv")
@@ -154,7 +161,7 @@ for i in range(len(kmer)):
 holder = {}
 ```
 
-## machine learning
+## Machine learning
 
 ### Adaboost Classifier
 
@@ -225,7 +232,7 @@ estimator = RandomForestClassifier(n_estimators=200,min_samples_leaf=1)
 holder['RF'] = method(estimator = estimator)
 ```
 
-### SVC
+### Support Vector Machine (SVC)
 
 ```{python,eval = FALSE}
 cv_results = []
@@ -264,7 +271,7 @@ for i in holder.tolist().keys():
 method_type[1] = "Adaboost"
 ```
 
-## deeplearning 
+## Deep learning 
 
 ```{python, eval = FALSE}
 #PBS
@@ -444,6 +451,8 @@ mean_kmer.append(result[4])
 DF = pd.DataFrame({"method":method_type,"mer15":mean_15mer,"kmer":mean_kmer})
 ```
 
+## Result
+
 ```{python}
 import seaborn as sns
 from matplotlib import cm
@@ -480,3 +489,5 @@ ax.spines["right"].set_visible(False)
 plt.savefig("../figure/different_methods_kmer.pdf",dpi = 300,bbox_inches='tight',transparent=True)
 plt.show()
 ```
+
+TLimmuno2 outperforms DNN, CNN and traditional machine learning methods, proving that our model structure can better fit the problem of immunogenicity prediction.

@@ -28,7 +28,13 @@ library(reticulate)
 use_python(Sys.which("python"))
 ```
 
-## Immunotherapy dataset
+
+- [Immunotherapy](#immunotherapy)
+- [Immunoediting](#immunoediting)
+
+## Immunotherapy
+
+To further validate TLimmuno2 and demonstrate the value of our model as a knowledge discovery tool, we evaluated the physiological relevance of TLimmuno2’s prediction. Most current cancer vaccine platforms preferentially screen candidate neoepitopes for vaccine production by selecting highly expressed candidate neoepitopes with high binding affinity to HLA alleles. However, despite rigorous candidate selection, many vaccine peptides do not elicit T-cell responses after vaccination. Therefore, we compare the performance of TLimmuno2 and NetMHCIIpan by using personalized melanoma neoepitopes with corresponding immune response data
 
 ```{python}
 import pandas as pd
@@ -183,9 +189,15 @@ plt.savefig("../figure/neoantigen_top20&50.pdf",dpi = 300,bbox_inches='tight',tr
 plt.show()
 ```
 
-## TCGA data preprocessing
+As shown in figure, TLimmuno2 performs better than the binding affinity model in accuracy, recall and F1 score by using 2% rank as a cut-off. The TopK metric (K=20 or 50, the number of positive samples in the top K samples with the lowest predicted ranks) is also used to evaluate the performance of different models, and TLimmuno2 shows improved performance compared with netMHCIIpan BA in these TopK metrics.
 
-we download 33 cancer type somatic mutation file form [ucsx xena](https://xenabrowser.net/datapages/), we focus on "MuTect2 Variant Aggregation and Masking". here the detail of dataset:
+## Immunoediting
+
+The interactions between immune cells and tumor cells are reflected as immunoediting, which could mediate the negative selection of DNA alterations encoding high immunogenicity. The status of MHC class II neoantigen mediated negative selection in cancer evolution is still unknown. We next applied the TLimmuno2 to predict the immunogenicity of neopeptides arising from missense mutation in TCGA samples.
+
+We then detect the immunoediting signals in TCGA samples by using the previously published CCF enrichment score (ESccf) method
+
+we download 33 cancer type somatic mutation file form [ucsx xena](https://xenabrowser.net/datapages/), we focus on "MuTect2 Variant Aggregation and Masking". here the detail of dataprocess:
 
 ```{r TCGA-data}
 #R
@@ -617,10 +629,17 @@ plt.savefig("/public/slst/home/wanggsh/TCGA-process/TCGA-prediction-with-Discret
 
 ![TCGA-Rank](./figure/TCGA-rank.png)
 
-![TCGA-prediction](./figure/TCGA-prediction.png)
+![TCGA-prediction-score-withoutdiscretevalue](./figure/TCGA-prediction.png)
 
-![TCGA-prediction-withvalue](./figure/TCGA-prediction-with-Discretevalues.png)
-# compare the different of MHCI BA ,MHCII BA and Immunogenicity
+![TCGA-prediction-score](./figure/TCGA-prediction-with-Discretevalues.png)
+
+By comparing prediction score and rank value in each TCGA samples, we found that most scores are less than 0.1 and the median rank value is around 0.5. It suggest that most mutant peptides are non-immunogenic.
+
+#### Compare the different of MHCI BA ,MHCII BA and Immunogenicity
+
+To evaluate the extent to which the TLimmuno2 learned a signal that is also learned by the binding affinity predictor, we measured the Pearson correlation between immunogenicity rank and binding affinity rank.
+
+1. combine MHC I binding affinity rank value and MHC II immunogenicity rank value
 
 ```{r,eval= FALSE}
 setwd("~/Project/MHCII/Data/TCGA-MHC-I/")
@@ -662,17 +681,18 @@ for (i in 1:100) {
   message("complete ", i)
 }
 saveRDS(final_result,"MHCI_BA.rds")
+```
 
+
+
+```{r}
 #MHCII_BA
 files <- list.files("~/Project/MHCII/Data/TCGA/neoantigen_es",full.names = T)
-
 res <- lapply(files,
                 function(x){
                   read_csv(x)
                 })
-
 MHC_II_imm <- bind_rows(res)
-
 files <- list.files("~/Project/MHCII/Data/TCGA/net_neoantigen_es",full.names = T)
 
 res <- lapply(files,
@@ -693,6 +713,8 @@ MHCIIBA_IMM$MHCII_BA_Rank <- MHCIIBA_IMM$MHCII_BA_Rank/100
 saveRDS(MHCIBA_IMM,"MHCIBA_IMM.rds")
 saveRDS(MHCIIBA_IMM,"MHCIIBA_IMM.rds")
 ```
+
+2. Calculating the Pearson correlation coefficient between Binding affinity and immunogenicity.
 
 ```{r}
 MHCIBA_IMM <- readRDS("../data/MHCIBA_IMM.rds")
@@ -752,9 +774,11 @@ ggplot(result,aes(padj,fill = Type)) +
 ggsave("../figure/BA_IMM_padj.pdf",dpi = 300,width = 6,height = 6)
 ```
 
-## immunoediting signal detect
+The correlations were positive, significant but low in magnitude, median Pearson r2 = 0.0968 in the compare between MHC I binding affinity rank and MHC II immunogenicity rank; and median Pearson r2 = 0.2057 in the compare between MHC II binding affinity rank and MHC II immunogenicity rank . Overall, this analysis suggested that the TLimmuno2 is at least partially non-redundant with the binding affinity predictor.
 
-if a missense mutation is a neoantigen? for a missense mutation, if a subsequence min HLA type's rank <0.02, is neo(1) ,else not neo(0)
+### immunoediting signal detect
+
+We analyzed all neoepitopes in TCGA using TLimmuno2 and set cutoff to 2% to obtain neoantigens.
 
 ```{python, eval = FALSE}
 #PBS_batch
@@ -790,7 +814,8 @@ for i in file:
     result.to_csv("".format(tumor))
 ```
 
-### calculate ES
+Then we can calculate and compare the median actual CCF-ES with median simulation CCF-ES in pan-cancer and cancer-type:
+
 ```{r,eval=FALSE}
 #R
 ccf <- readRDS("all_mut_mis_ccf.rds")
@@ -842,7 +867,7 @@ all_mut_ccf_tpm <- all_mut_ccf_tpm %>%
 saveRDS(all_mut_ccf_tpm,file = "mut_ccf_tpm_neo.rds")
 ```
 
-```{r}
+```{r, eval= FALSE}
 cal_nes_warp <- function(dt){
   results_ccf <- vector("list",length = length(unique(dt$sample)))
   names(results_ccf) <- unique(dt$sample)
@@ -1045,6 +1070,8 @@ p2 <- get_f1(neo_nes,pancancer_p = 0.0005,
 p2
 ggsave("../figure/immuno_edit.pdf",width = 12,height = 5,dpi = 300)
 ```
+
+In TCGA pan-cancer cohort, when samples with antigenic and driver mutations lying on the same gene are removed, the observed median ESCCF is -0.024 (n = 5,524, P-value = 0.0005). By comparing simulated median ES distribution, several cancer types including adrenocortical carcinoma (ACC), Thymoma (THYM), Esophageal carcinoma (ESCA), Cervical squamous cell carcinoma and endocervical adenocarcinoma (CESC), Cervical squamous cell carcinoma and endocervical adenocarcinoma (LUAD) show significant low ESCCF values
 
 ```{r}
 sim_all <- readRDS("../data/net_sim_add_cancer.rds")
