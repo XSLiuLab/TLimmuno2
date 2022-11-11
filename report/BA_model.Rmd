@@ -389,7 +389,7 @@ plt.savefig("/public/slst/home/wanggsh/Project/Saved_model/Model_fig/BA_model/PR
 print("finish")
 ```
 
-### train history fig
+### Train history fig
 
 cross validation: The training results of the model are very stable, the average AUC of ROC is 0.97, and the average AUC of PR is 0.96.
 

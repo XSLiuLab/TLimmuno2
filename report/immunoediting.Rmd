@@ -685,7 +685,7 @@ saveRDS(final_result,"MHCI_BA.rds")
 
 
 
-```{r}
+```{r, eval=FALSE}
 #MHCII_BA
 files <- list.files("~/Project/MHCII/Data/TCGA/neoantigen_es",full.names = T)
 res <- lapply(files,

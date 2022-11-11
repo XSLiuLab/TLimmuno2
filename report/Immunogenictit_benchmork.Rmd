@@ -49,7 +49,7 @@ This part focuses on another independent dataset to compare the performance of T
 
 ## Benchmark in immunoigenicity
 
-the IEDB-Benchmark dataset is from the same database as the training set, thus they may have similar distribution patterns, which may lead to systematic bias. To perform an unbiased performance evaluation in predicting immunogenic peptides, we retrieved published papers to collect neoepitopes that were tested experimentally for CD4+ T cell immunogenicity.
+The IEDB-Benchmark dataset is from the same database as the training set, thus they may have similar distribution patterns, which may lead to systematic bias. To perform an unbiased performance evaluation in predicting immunogenic peptides, we retrieved published papers to collect neoepitopes that were tested experimentally for CD4+ T cell immunogenicity.
 
 
 ### Data proprecessing
@@ -142,7 +142,7 @@ We also compared the performance of TLimmuno2 with other immunogenicity predicti
 
 #### IEDB online tool(CD4episcore)
 
-we run IEDB in their website [IEDB online tool](http://tools.iedb.org/CD4episcore/), and this tool only support 15mer peptides.
+We run IEDB in their website [IEDB online tool](http://tools.iedb.org/CD4episcore/), and this tool only support 15mer peptides.
 
 #### Repitope
 
@@ -430,7 +430,7 @@ plt.savefig("../figure/kmer_pr.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
-### confusion matrix
+### Confusion matrix
 
 ```{python}
 result_15mer["pre_label"] = result_15mer["prediction"].map(lambda x : 1 if x>0.5 else 0)
@@ -735,7 +735,7 @@ Both results show that P4 (residue 4), P5, and P6 are very important for model p
 
 ### BA model
 
-we also do the same things by using BA model.
+We also do the same things by using BA model.
 
 ```{python,eval = FALSE}
 import pandas as pd

@@ -94,7 +94,7 @@ ggplot(data = IEDB_immuno_MHCII_filter_final)+
   geom_histogram(aes(x = `Qualitative Measure`),stat = "count")+xlab("Label")+ylab("Number") + labs(title = "IEDB")+ theme(plot.title = element_text(hjust = 0.5))
 ```
 
-data for benchmark:
+Data for benchmark:
 
 ```{r IEDB-benchmark}
 #R
