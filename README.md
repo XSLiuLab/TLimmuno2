@@ -17,7 +17,15 @@ Read online analysis report at https://xsliulab.github.io/TLimmuno2/.
 * [report](./report) Rmarkdown files of analysis report and related html web page files.
 * [figure](./figure) The figure produced by all Rmarkdown files.
 
-## How to use
+## Usage
+
+Dependency
+```
+pandas
+numpy
+tensorflow
+pyarrow
+```
 You can download the entire repository and repeat our work, but the repository is a little big.
 If you just want to use TLimmuno2 model, you can just pull ```Python``` file by using below command:
 ```
@@ -29,10 +37,39 @@ git config core.sparsecheckout true
 echo "Python" >> .git/info/sparse-checkout
 git pull origin main
 ```
+There are two ways to use TLimmuno2: ```line``` mode and ```file``` mode:
+
+For ```line``` model, you can get singe epitope result on terminal, here are the sample:
+```
+python Python/TLimmuno2.py --mode line --epitope GLLFRRLTSREVLLL --hla DRB1_0803
+```
+
+For ```file``` model, you can input a file like ```example.csv``` and get the ```result.csv``` in output filer:
+```
+python Python/TLimmuno2.py --mode file --intdir ./Python/data/example.csv --outdir .
+```
+
+A full help prompt is as below:
+```
+usage: TLimmuno2.py [-h] [--mode MODE] [--epitope EPITOPE] [--hla HLA] [--intdir INTDIR] [--outdir OUTDIR] [--gpu GPU]
+
+TLimmuno2 command line
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --mode MODE        line mode or file mode
+  --epitope EPITOPE  if line mode, specifying your epitope
+  --hla HLA          if line mode, specifying your HLA allele
+  --intdir INTDIR    if file mode, specifying the path to your input file
+  --outdir OUTDIR    if file mode, specifying the path to your output folder
+  --gpu GPU          if you device don't have GPU, please set it to False
+
+```
+
 
 ## Citation
 
-need to add paper
+waitting to add paper
 
 ## Acknowledgement
 
