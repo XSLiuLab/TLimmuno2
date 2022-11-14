@@ -2,15 +2,18 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import argparse
-import os
-os.chdir(os.getcwd())
+
 
 #load model
-BA_model = tf.keras.models.load_model("./Python/model/BAmodel")
-BAmodel = tf.keras.models.Model(inputs = BA_model.input,outputs = BA_model.layers[-2].output)
-TLimmuno2 = tf.keras.models.load_model("./Python/model/TLimmuno2")
+def model_load():
+    BA_model = tf.keras.models.load_model("./Python/model/BAmodel")
+    BAmodel = tf.keras.models.Model(inputs = BA_model.input,outputs = BA_model.layers[-2].output)
+    TLimmuno2 = tf.keras.models.load_model("./Python/model/TLimmuno2")
+    return BAmodel,TLimmuno2
+
 pseudo_seq = pd.read_feather("./Python/data/pseudo_blosum62.feather")
-pseudo_seq_file = pd.read_table("./Python/data/pseudosequence.2016.all.X.dat",header=None,names=("HLA","sequence"))
+pseudo_seq_file = pd.read_table("./data/pseudosequence.2016.all.X.dat",header=None,names=("HLA","sequence"))
+
 def blosum62(peptide,maxlen):
 
     Blosum62_matrix = pd.read_csv("./Python/data/BLOSUM62.csv",comment="#")
@@ -62,7 +65,7 @@ def model_predict(peptide,MHC):
 
 
 def rank(Data):
-    IMM_bg_pep = pd.read_csv("./data/IMM_bg_pep.csv")
+    IMM_bg_pep = pd.read_csv("./Python/data/IMM_bg_pep.csv")
     IMM_bg_pep["pep_blosum"] = IMM_bg_pep["pep"].apply(blosum62,args=(21,))
     DF = pd.DataFrame()
     for i in Data["HLA"].unique():
@@ -94,9 +97,16 @@ def rank(Data):
 
 
 def main(args):
+    print("Load model")
+    if args.gpu != True:
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"]="-1" 
+    BAmodel,TLimmuno2 = model_load()
+    print("Data process")
     Data = data_process(args)
     peptide = peptide_code(Data)
     MHC = MHC_code(Data)
+    print("Model predict")
     prediction_result = model_predict(peptide,MHC)
     Data["prediction"] = prediction_result
     Result = rank(Data)
@@ -113,6 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--hla',type=str,default=None,help='if line mode, specifying your HLA allele')
     parser.add_argument('--intdir',type=str,default=None,help='if file mode, specifying the path to your input file')
     parser.add_argument('--outdir',type=str,default=None,help='if file mode, specifying the path to your output folder')
+    parser.add_argument('--gpu',type=str,default=True,help='if you device don\'t have GPU, please set it to False')
     args = parser.parse_args()
     main(args)
 
