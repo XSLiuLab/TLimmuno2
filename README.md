@@ -17,10 +17,18 @@ Read online analysis report at https://xsliulab.github.io/TLimmuno2/.
 * [report](./report) Rmarkdown files of analysis report and related html web page files.
 * [figure](./figure) The figure produced by all Rmarkdown files.
 
-## how to use
-
-Run example
-
+## How to use
+You can download the entire repository and repeat our work, but the repository is a little big.
+If you just want to use TLimmuno2 model, you can just pull ```Python``` file by using below command:
+```
+mkdir TLimmuno2
+cd TLimmuno2
+git init
+git remote add -f origin https://github.com/XSLiuLab/TLimmuno2.git
+git config core.sparsecheckout true
+echo "Python" >> .git/info/sparse-checkout
+git pull origin main
+```
 
 ## Citation
 

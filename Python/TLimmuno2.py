@@ -9,11 +9,11 @@ os.chdir(os.getcwd())
 BA_model = tf.keras.models.load_model("./Python/model/BAmodel")
 BAmodel = tf.keras.models.Model(inputs = BA_model.input,outputs = BA_model.layers[-2].output)
 TLimmuno2 = tf.keras.models.load_model("./Python/model/TLimmuno2")
-pseudo_seq = pd.read_feather("./data/pseudo_blosum62.feather")
-pseudo_seq_file = pd.read_table("./data/pseudosequence.2016.all.X.dat",header=None,names=("HLA","sequence"))
+pseudo_seq = pd.read_feather("./Python/data/pseudo_blosum62.feather")
+pseudo_seq_file = pd.read_table("./Python/data/pseudosequence.2016.all.X.dat",header=None,names=("HLA","sequence"))
 def blosum62(peptide,maxlen):
 
-    Blosum62_matrix = pd.read_csv("./data/BLOSUM62.csv",comment="#")
+    Blosum62_matrix = pd.read_csv("./Python/data/BLOSUM62.csv",comment="#")
     Protein_alphabet = list("ARNDCQEGHILKMFPSTWYVX")
     Blosum62_matrix = Blosum62_matrix[Protein_alphabet]
     Blosum62_matrix = Blosum62_matrix.loc[Protein_alphabet]
