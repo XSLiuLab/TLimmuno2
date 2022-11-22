@@ -99,19 +99,19 @@ def netMHCIIpan_process(result,allele,ori_sorted,peptide):
     final_result = final_result.merge(peptide,how = "inner",on = "pep_ID" )
     return final_result 
 patient_id = ["O.1","O.2","O.3","O.4","O.5","O.6"]
-DF15 = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/DF15.csv")
+DF15 = pd.read_csv("../data/DF15.csv")
 ```
 
 ```{python}
-result_15 = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/15mer_rank_result.csv")
+result_15 = pd.read_csv("../data/15mer_rank_result.csv")
 peptide= pd.read_csv("../data/peptide.csv")
 Rank_15mer = IMM_process_rank(result_15,peptide)
 DF15_sorted = DF15.sort_values(by=["pep","HLA"]).reset_index(drop = True)
-allele = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/allele.csv")
-netMHCIIpan_ba = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/netMHCIIpan_15_mer_ba.csv")
+allele = pd.read_csv("../data/allele.csv")
+netMHCIIpan_ba = pd.read_csv("../data/netMHCIIpan_15_mer_ba.csv")
 netMHCIIpan_ba["pep_length"] = netMHCIIpan_ba["peptide"].map(len)
 net_15mer_ba = netMHCIIpan_process(netMHCIIpan_ba,allele,DF15_sorted,peptide)
-netMHCIIpan_el = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/netMHCIIpan_15_mer_el.csv")
+netMHCIIpan_el = pd.read_csv("../data/netMHCIIpan_15_mer_el.csv")
 netMHCIIpan_el["pep_length"] = netMHCIIpan_el["peptide"].map(len)
 net_15mer_el = netMHCIIpan_process(netMHCIIpan_el,allele,DF15_sorted,peptide)
 ott_net_ba = net_15mer_ba[net_15mer_ba["Patient_ID"].map(lambda x : x in patient_id)]

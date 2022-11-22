@@ -229,7 +229,9 @@ def auc_pr(data,true_label,prediction,rank = False):
     PR = auc(recall,precision)
     
     return fpr,tpr,recall,precision,AUC,PR
-  
+```
+
+```{python}
 result = pd.read_csv("../data/15mer_result.csv")
 result_15mer = IMM_process(result,peptide)
 mer15_result = auc_pr(result_15mer,"Immunogenicity","prediction")
@@ -341,6 +343,7 @@ mer15_el_result = auc_pr(net_15mer_el,"Immunogenicity","prediction",rank = True)
 print("AUC:{}".format(mer15_el_result[4]))
 print("PR_AUC:{}".format(mer15_el_result[5]))
 ```
+
 ```{python}
 DF_k_sorted = DF_k.sort_values(by=["pep","HLA"]).reset_index(drop = True)
 netMHCIIpan_ba_k = pd.read_csv("/Users/wangguangshuai/Data/MHCII/Data/IMM_model_benchmark/netMHCIIpan_k_mer_ba.csv")
@@ -355,6 +358,11 @@ print("BA AUC: {}".format(kmer_ba_result[4]))
 print("BA PR_AUC: {}".format(kmer_ba_result[5]))
 print("EL AUC: {}".format(kmer_el_result[4]))
 print("EL PR_AUC: {}".format(kmer_el_result[5]))
+```
+
+```{python}
+kmer_data = pd.read_csv("../data/kmer_data.csv")
+kmer_data["pep"].to_csv("../data/kmer_pep_only.csv",header = None,index = None)
 ```
 
 In these comparisons, TLimmuno2 shows the best performance both in the 15-mer method and the k-mer method. Repitope and IEDB tools evaluate epitope immunogenicity using population MHC information, not considering the personalized MHC allele information, and have a poor performance in these comparisons.
@@ -588,6 +596,29 @@ plt.xticks((0,1),labels = ["WT peptide","Neoantigen"])
 plt.tight_layout()
 sns.despine(offset = 3, trim = True)
 plt.savefig("../figure/neoantigen.pdf",dpi = 300,transparent=True)
+plt.show()
+```
+```{python}
+#python
+result = pd.read_csv("../data/neoantigen_result.csv")
+result = result[result["immunogenic"] == 1]
+Rank = pd.melt(result[["WT_prediction","Mut_prediction"]],var_name = "Type",value_name = "Score")
+from scipy import stats
+_,p = stats.wilcoxon(result["WT_prediction"],result["Mut_prediction"])
+fig,ax = plt.subplots(figsize = (4,6))
+ax = sns.boxplot(data = Rank,x = "Type",y = "Score",width = 0.4,color = "skyblue",linewidth = 2,showfliers = False)
+b = sns.stripplot(data = Rank,x = "Type",y = "Score",color = "red")
+x1, x2 = 0, 1   
+y, h, col = Rank['Score'].max() + 0.1, 0.1, 'k'
+plt.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1, c=col)
+plt.text((x1+x2)*.5, y+h, "**", ha='center', va='bottom', color=col)
+ax.text(0.3,0.9,"P = {:.4f}".format(p),weight="bold")
+plt.ylim([0,1.2])
+plt.yticks(np.arange(0,1.2,0.2))
+plt.xticks((0,1),labels = ["WT peptide","Neoantigen"])
+plt.tight_layout()
+sns.despine(offset = 3, trim = True)
+plt.savefig("../figure/neoantigen_prediction.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 

@@ -113,7 +113,7 @@ def MHC_dis_plot(Data,color,colname):
     plt.xticks(rotation = 90)
 ```
 
-we show the distribution of allele in different labels:
+We show the distribution of allele in different labels:
 
 ```{python}
 #python
@@ -176,6 +176,8 @@ Unlike NetMHCIIpan4.0, we use the LSTM layer to construct our model. Antigen seq
 The input of this model is the peptides sequence and the MHC sequence. The output is whether the peptides bind to the MHC molecule or not. We used 5-fold cross-validation and the training results are shown in training histrory.
 
 ### Structure
+
+Here are the script that are used to train the BA model, this job is done on HPC:
 
 ```{python model-structure,eval = FALSE}
 #PBS
@@ -391,7 +393,7 @@ print("finish")
 
 ### Train history fig
 
-cross validation: The training results of the model are very stable, the average AUC of ROC is 0.97, and the average AUC of PR is 0.96.
+We use 5-fold cross validation to validate our model. Cross validation: The training results of the model are very stable, the average AUC of ROC is 0.97, and the average AUC of PR is 0.96. 
 
 ![BA corss ROC](./figure/BA_ROC_cross.png)
 
@@ -409,7 +411,7 @@ We compare the performance of our BA with other models on an independent dataset
 
 ### Benchmark data preprecess
 
-We collected independent datasets named Automated from Andreatta et al. and drop duplicated data with training dataset. we also change binding affinity into binary label by log50k transformed method.
+We collected independent datasets Automated from Andreatta et al. and drop duplicated data with training dataset. we also change binding affinity into binary label by log50k transformed method.
 
 ```{r Automated-data,message=FALSE}
 #R
@@ -624,7 +626,7 @@ plt.show()
 
 ```{python BA_confusion_matrix}
 #python
-BA_result["pre_label"] = BA_result["prediction"].map(lambda x : 1 if x>0.362 else 0)
+BA_result["pre_label"] = BA_result["prediction"].map(lambda x : 1 if x>0.426 else 0)
 BA_CM = confusion_matrix(BA_result["label"],BA_result["pre_label"])
 BA_CM = BA_CM/len(BA_result)
 netMHC_result["pre_label"] = netMHC_result["percentile_rank"].map(lambda x : 1 if x <10 else 0)
@@ -637,7 +639,7 @@ fig,ax = plt.subplots(figsize = (8,6))
 sns.heatmap(BA_CM, annot=True,cmap="YlGnBu",vmin=0, vmax=0.6)
 plt.ylabel("True label")
 plt.xlabel("Prediction label")
-plt.title("BA model confusion matrix(threshold:0.362)")
+plt.title("BA model confusion matrix(threshold:0.426)")
 plt.savefig("../figure/BA_CM.pdf",dpi = 300,transparent=True)
 plt.show()
 ```

@@ -1,4 +1,4 @@
-# TLimmuno2: predicting HLA class II antigen immunogenicity through integrated deep learning
+# TLimmuno2: predicting MHC class II antigen immunogenicity through transfer learning
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![version](https://img.shields.io/badge/version-dev-green.svg)](https://shields.io/)
