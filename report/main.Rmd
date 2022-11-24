@@ -154,7 +154,7 @@ python <Python file>
     print("{} submitted".format(i))
 ```
 
-4.Background sequence: TLimmuno2 outputs a continuous variable between 0 and 1 and also percentile rank. we download all human peptide sequence from UniPort database(2022.3) and randomly sampling peptides. We generated a set of 90,000 13-21-mer random natural peptides (10,000 of each length). For each peptide-MHC II pair, percentile ranks were computed based on background sequence, smaller rank indicates stronger immunogenicity..The result maybe different as the reason of random select.
+4.Background sequence: TLimmuno2 outputs a continuous variable between 0 and 1 and also percentile rank. we download all human peptide sequence from UniPort database(2022.3) and randomly sampling peptides. We generated a set of 90,000 13-21-mer random natural peptides (10,000 of each length). For each peptide-MHC II pair, percentile ranks were computed based on background sequence, smaller rank indicates stronger immunogenicity. The result maybe different as the reason of random select.
 
 ```{python random-bg-pep, eval = FALSE}
 #python

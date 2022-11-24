@@ -457,7 +457,7 @@ The Automated dataset are shown below：
 DT::datatable(Automated_filter,rownames = FALSE)
 ```
 
-### Run and  result
+### Result
 
 The process of using the different tools is shown below, all processes are done on HPC.
 
@@ -620,9 +620,6 @@ plt.savefig("../figure/Automate_label_dis.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
-```{r}
-1 - log(1000,base = 50000)
-```
 
 ```{python BA_confusion_matrix}
 #python
@@ -666,7 +663,7 @@ plt.savefig("../figure/mixMHC2pred_CM.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
-By using IEDB recommend cutoff 10%rank and 0.362 (1000nm, log50k transformed), we found NetMHCIIpan and MixMHC2pred tend to predict the result as negative while our BA model can correctly distinguish between negatives and positives
+By using IEDB recommend cutoff 10%rank and 0.426 (500nm, log50k transformed), we found NetMHCIIpan and MixMHC2pred tend to predict the result as negative while our BA model can correctly distinguish between negatives and positives
 
 ```{python pre_recall_fig, include = FALSE}
 #python
