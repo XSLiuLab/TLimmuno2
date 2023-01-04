@@ -51,7 +51,7 @@ This part focuses on TLimmuno2 model construction. it contains the following sec
 
 ## Data preprocessing
 
-Immunogenicity molecular assays were downloaded from the Immune Epitope Database (IEDB) on May 15, 2022. The following keywords were used: Linear peptide; T cell; Include positive and negative; Human and any disease. We next used strict criteria for data cleaning. First, data instances without explicit 4-digit MHC alleles were discarded. Second, the length of the peptides is limited in the range of 13-21 mer. Third, the data with low confidence (no information in number of subjects tested/responded) were removed. Finally, we chose five experiment types, “51 chromium”, “ELISA”, “ELISPOT”, “ICS” and “multimer/tetramer” to train model as the reason of we think these are more reliable. The rest of experiment types is used for model benchmark. In the final, we got 3930 positive instances and 2478 negative instances for training, and 105 positive instances and 4 negative instances for benchmark.
+Immunogenicity molecular assays were downloaded from the Immune Epitope Database (IEDB) on May 15, 2022. The following keywords were used: Linear peptide; T cell; Include positive and negative; MHC II; Human and any disease. We next used strict criteria for data cleaning. First, data instances without explicit 4-digit MHC alleles were discarded. Second, the length of the peptides is limited in the range of 13-21 mer. Third, the data with low confidence (no information in number of subjects tested/responded) were removed. Finally, we chose five experiment types, “51 chromium”, “ELISA”, “ELISPOT”, “ICS” and “multimer/tetramer” to train model as the reason of we think these are more reliable. The rest of experiment types is used for model benchmark. In the final, we got 3930 positive instances and 2478 negative instances for training, and 105 positive instances and 4 negative instances for benchmark.
 
 ```{r IMM-data,message=FALSE}
 #R
@@ -65,6 +65,12 @@ IEDB_immuno_MHCII_filter$`Qualitative Measure` <- str_replace(IEDB_immuno_MHCII_
 IEDB_immuno_MHCII_filter$`Qualitative Measure` <- str_replace(IEDB_immuno_MHCII_filter$`Qualitative Measure`,"Positive-Low","Positive")
 IEDB_immuno_MHCII_filter <- IEDB_immuno_MHCII_filter[!(duplicated(IEDB_immuno_MHCII_filter)),]
 IEDB_immuno_MHCII_filter$length <- sapply(IEDB_immuno_MHCII_filter$Description, nchar)
+#add method ratio
+IEDB_immuno_assay <- IEDB_immuno_MHCII_filter %>% filter(nchar(`Allele Name`)>=14) %>% filter(length>=13&length<=21) %>% group_by(`Method/Technique`) %>% summarise(num = n())
+ggplot(data = IEDB_immuno_assay)+
+  geom_col(aes(x = reorder(`Method/Technique`,-num),y=num))+xlab("Expirement Type")+ylab("Number") + theme(axis.text.x = element_text(angle=90, hjust=1, vjust=.5))
+ggsave("../figure/IEDB_assay_type.pdf")
+
 IEDB_immuno_MHCII_filter1 <- IEDB_immuno_MHCII_filter %>% filter(nchar(`Allele Name`)>=14) %>% filter(length>=13&length<=21) %>% 
   filter(`Method/Technique`=="51 chromium"|`Method/Technique`=="ELISA"|`Method/Technique`=="ELISPOT"|`Method/Technique`=="ICS"|`Method/Technique`=="multimer/tetramer") %>% filter(str_detect(`Allele Name`,"HLA"))
 fun <- function(x){
@@ -97,6 +103,8 @@ ggplot(data = IEDB_immuno_MHCII_filter_final)+
 
 Data for benchmark:
 
+NEW!! These part is deleated in the paper.
+
 ```{r IEDB-benchmark}
 #R
 IEDB_immuno_MHCII_filter2 <- IEDB_immuno_MHCII_filter %>% filter(nchar(`Allele Name`)>=14) %>% filter(length>=13&length<=21) %>% 
@@ -109,8 +117,8 @@ IEDB_immuno_MHCII_benchmark <-  na.omit(IEDB_immuno_MHCII_filter2) # only respon
 IEDB_immuno_MHCII_benchmark <- IEDB_immuno_MHCII_benchmark[!(duplicated(IEDB_immuno_MHCII_benchmark[,c(1,4)])),]
 bool1 <- IEDB_immuno_MHCII_benchmark$Description %in% IEDB_immuno_MHCII_filter_final$Description
 bool2 <- IEDB_immuno_MHCII_benchmark$`Allele Name` %in% IEDB_immuno_MHCII_filter_final$`Allele Name`
-IEDB_immuno_MHCII_benchmark_final <- IEDB_immuno_MHCII_benchmark[bool1&bool2,]
-write_csv(IEDB_immuno_MHCII_benchmark_final,"../data/IEDB_benchmark.csv")
+IEDB_immuno_MHCII_benchmark_final <- IEDB_immuno_MHCII_benchmark[!(bool1&bool2),]
+#write_csv(IEDB_immuno_MHCII_benchmark_final,"../data/IEDB_benchmark.csv")
 ```
 
 We also analyzed the distribution of HLA types in the immunogenicity data and found that it has a similar distribution to the Binding affinity data, and the peptides with a length of 15mer accounted for the largest proportion.
@@ -525,230 +533,6 @@ We first divided the data set into training and test sets by the ratio of 9:1 fo
 
 ![PR](./figure/TLimmuno2_PR.png)
 
-## Initial benchmark
-
-To compare with existing tools, we performed benchmark study by using independent datasets. We first used the IEDB-benchmark dataset (Methods) to compare the performance of TLimmuno2 and NetMHCIIpan BA/EL model. This dataset contains 105 immunogenicity peptides, 4 non-immunogenicity peptides and 5 times randomly selected human non-immunogenicity peptides. In this and all of the following validation processes, data that appeared in the training dataset were removed and thus were completely independent of the training set. TLimmuno2 shows much better performance (AUC: 0.9145) compared with NetMHCIIpan in this independent dataset (BA AUC = 0.7416, EL AUC = 0.7194).
-
-```{python }
-#python
-f=open("../data/uniport_human.fasta")
-ls=[]
-for line in f:
-        if not line.startswith('>'):
-                ls.append(line.replace('\n',''))
-f.close()
-uniport = pd.DataFrame(ls)
-uniport["length"] = uniport[0].map(len)
-bool = uniport["length"]>30
-uniport = uniport[bool]
-bool = uniport[0].apply(lambda x: set(list(x)).issubset(set(list("ARNDCQEGHILKMFPSTWYV"))))
-#netMHCIIpan do not support "X"
-uniport = uniport[bool]
-uniport_random = uniport[0].values
-def random_select(x,length,num,allele):
-    df = []
-    all = []
-    for i in range(num):
-        protein_num = random.randint(0,len(x)-1)
-        protein = x[protein_num]
-        peptide_num = random.randint(0,len(protein)-length)
-        peptide = protein[peptide_num:peptide_num+length]
-        df.append(peptide)
-        all.append(allele)
-    return df,all
-benchmark_data = pd.read_csv("../data/IEDB_benchmark.csv")
-Allele = benchmark_data[["Allele Name","Allele Name1"]].drop_duplicates()
-negative = []
-allele = []
-time = 5
-for i in range(time):
-    for i in benchmark_data["Allele Name1"].unique():
-        smal_IMM = benchmark_data[benchmark_data["Allele Name1"] == i]["length"].value_counts()
-        for l in range(len(smal_IMM)):
-            length = int(smal_IMM.index[l])
-            num = int(smal_IMM.values[l])
-            pep,all = random_select(uniport_random,length,num,i)
-            negative.extend(pep)
-            allele.extend(all)
-
-benchmark_data = benchmark_data[["Description","Qualitative Measure","Allele Name1"]]
-random_data = pd.DataFrame({"Description":negative,"Allele Name1":allele})
-random_data["Qualitative Measure"] = "Negative"
-final_data = pd.concat([benchmark_data,random_data],axis=0)
-final_data["label"] = final_data["Qualitative Measure"].map(lambda x : 1 if x == "Positive" else 0)
-final_data = final_data.drop_duplicates()
-final_data = pd.merge(final_data,Allele)
-pseudo_data = pd.read_table("../data/pseudosequence.2016.all.X.dat",header=None,names=["Allele Name1","sequence"])
-pseudo_data = pseudo_data.drop_duplicates()
-Data = pd.merge(final_data,pseudo_data).drop_duplicates()
-#Data.to_csv("../data/IEDB_benchmark_with_random.csv") 
-```
-
-```{python, eval = FALSE}
-#netMHCIIpan EL
-import pandas as pd
-import os
-Data = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/IEDB_benchmark_with_random.csv")
-Data["length"] = Data["Description"].map(len)
-result_file_path = "/public/slst/home/wanggsh/Data/MHCII_immuno/netMHCIIpan_benchmark"
-allele = Data["Allele Name"].unique()
-
-PD = pd.DataFrame()
-comd = "python /public/slst/home/wanggsh/biosoft/mhc_ii/mhc_II_binding.py netmhciipan_el"
-file_path = "{0}/pep_el.csv".format(result_file_path)
-for i in allele:
-    aEL = Data[Data["Allele Name"] == i]
-    length = aEL["length"].unique()
-    for l in length:
-        lEL = aEL[aEL["length"] == l] 
-        lEL["Description"].to_csv("{0}".format(file_path),header = False,index = False)
-        os.system("{0} {1} {2} {3} > {4}/result_el.txt".format(comd,i,file_path,l,result_file_path))
-        result = pd.read_table("{0}/result_el.txt".format(result_file_path))
-        PD= result.append(PD)
-    PD.to_csv("{0}/netMHCIIpan_IEDB_el.csv".format(result_file_path))
-
-print("finish")
-```
-
-```{python, eval = FALSE}
-#netMHCIIpan BA
-import pandas as pd
-import os
-Data = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/IEDB_benchmark_with_random.csv")
-Data["length"] = Data["Description"].map(len)
-result_file_path = "/public/slst/home/wanggsh/Data/MHCII_immuno/netMHCIIpan_benchmark"
-allele = Data["Allele Name"].unique()
-
-PD = pd.DataFrame()
-comd = "python /public/slst/home/wanggsh/biosoft/mhc_ii/mhc_II_binding.py netmhciipan_ba"
-file_path = "{0}/pep_el.csv".format(result_file_path)
-for i in allele:
-    aEL = Data[Data["Allele Name"] == i]
-    length = aEL["length"].unique()
-    for l in length:
-        lEL = aEL[aEL["length"] == l] 
-        lEL["Description"].to_csv("{0}".format(file_path),header = False,index = False)
-        os.system("{0} {1} {2} {3} > {4}/result_ba.txt".format(comd,i,file_path,l,result_file_path))
-        result = pd.read_table("{0}/result_ba.txt".format(result_file_path))
-        PD= result.append(PD)
-    PD.to_csv("{0}/netMHCIIpan_IEDB_ba.csv".format(result_file_path))
-
-print("finish")
-```
-
-```{python,eval = FALSE}
-#PBS
-#python
-import pandas as pd
-import numpy as np
-import tensorflow as tf
-import sys
-sys.path.append("/public/slst/home/wanggsh/Project/MHCII/utils")
-from Blosum62 import blosum62
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1" 
-#load_model
-
-BA_model = tf.keras.models.load_model("/public/slst/home/wanggsh/Project/Saved_model/new_BA_model/model1")
-BAmodel = tf.keras.models.Model(inputs = BA_model.input,outputs = BA_model.layers[-2].output)
-IMM = tf.keras.models.load_model("/public/slst/home/wanggsh/Project/Saved_model/MHCII_immuno/model")
-Data = pd.read_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/IEDB_benchmark_with_random.csv")
-Data["pep_blosum"] = Data["Description"].apply(blosum62,args=(21,))
-Data["MHC_blosum"] = Data["sequence"].apply(blosum62,args=(34,))
-peptide = np.empty((len(Data),21,21))
-for i in range(len(Data)):
-    peptide[i] = Data["pep_blosum"][i].reshape((21,21))
-#mhc
-MHC = np.empty((len(Data),34,21))
-for i in range(len(Data)):
-    MHC[i] = Data["MHC_blosum"][i].reshape((34,21))
-
-BA = BAmodel.predict([peptide,MHC])
-IMM_result = IMM.predict([peptide,MHC,BA])
-Data["prediction"] = IMM_result
-Data.pop("pep_blosum")
-Data.pop("MHC_blosum")
-Data.to_csv("/public/slst/home/wanggsh/Data/MHCII_immuno/IEDB_benchmark_result.csv")
-print("Finish")
-```
-
-```{python}
-data = pd.read_csv("../data/IEDB_benchmark_with_random.csv")
-data["len"] = data["Description"].map(len)
-data = data[data["len"]>=15]
-data["Description"].to_csv("../data/pep.csv",index = None,header = None)
-res = pd.read_csv("../data/pep_result.csv")
-res = pd.merge(res,data,left_on = "Peptide",right_on = "Description")
-fpr,tpr,_ = roc_curve(res["label"],1-res["Immunogenicity Score"])
-IEDB_AUC = auc(fpr,tpr)
-```
-
-```{python, Repitopes}
-repitope_data = pd.read_csv("../data/IEDB_repitope.csv")
-repitope_res = pd.merge(repitope_data,data,left_on = "Peptide",right_on = "Description")
-rep_fpr,rep_tpr,_ = roc_curve(repitope_res["label"],repitope_res["ImmunogenicityScore"])
-repitope_AUC = auc(rep_fpr,rep_tpr)
-```
-
-```{python}
-def auc_pr(data,true_label,prediction,rank = False):
-    if rank:
-        fpr,tpr,_ = roc_curve(data[true_label],1-data[prediction])
-        precision,recall,_ = precision_recall_curve(data[true_label],1-data[prediction])
-    else:
-        fpr,tpr,_ = roc_curve(data[true_label],data[prediction])
-        precision,recall,_ = precision_recall_curve(data[true_label],data[prediction])
-        
-    AUC = auc(fpr,tpr)
-    PR = auc(recall,precision)
-    
-    return fpr,tpr,recall,precision,AUC,PR
-IEDB_benchmark = pd.read_csv("../data/IEDB_benchmark_result.csv")
-IEDB_benchmark["label"] = IEDB_benchmark["Qualitative Measure"].map(lambda x: 1 if x =="Positive" else 0)
-IEDB_result = auc_pr(IEDB_benchmark,"label","prediction")
-netMHCIIpan_IEDB_ba = pd.read_csv("../data/netMHCIIpan_IEDB_ba.csv")
-netMHCIIpan_IEDB_ba = pd.merge(netMHCIIpan_IEDB_ba,IEDB_benchmark[["Description","Allele Name","label"]],left_on = ["peptide","allele"],right_on = ["Description","Allele Name"])
-net_ba_IEDB_result = auc_pr(netMHCIIpan_IEDB_ba,"label","percentile_rank",rank = True)
-netMHCIIpan_IEDB_el = pd.read_csv("../data/netMHCIIpan_IEDB_el.csv")
-netMHCIIpan_IEDB_el = pd.merge(netMHCIIpan_IEDB_el,IEDB_benchmark[["Description","Allele Name","label"]],left_on = ["peptide","allele"],right_on = ["Description","Allele Name"])
-net_el_IEDB_result = auc_pr(netMHCIIpan_IEDB_el,"label","percentile_rank",rank = True)
-```
-
-```{python}
-fig,ax = plt.subplots(figsize = (8,8))
-lw = 2
-ax.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
-ax.plot(IEDB_result[0],IEDB_result[1],label='TLimmuno2 : (AUC={0:.4f})'.format(IEDB_result[4]),linewidth = 2)
-
-ax.plot(fpr,tpr,label='IEDB : (AUC={0:.4f})'.format(IEDB_AUC))
-ax.plot(rep_fpr,rep_tpr,label='Repitope : (AUC={0:.4f})'.format(repitope_AUC))
-
-ax.plot(net_ba_IEDB_result[0],net_ba_IEDB_result[1],label='NetMHCIIpan_ba : (AUC={0:.4f})'.format(net_ba_IEDB_result[4]),linewidth = 2)
-ax.plot(net_el_IEDB_result[0],net_el_IEDB_result[1],label='NetMHCIIpan_el : (AUC={0:.4f})'.format(net_el_IEDB_result[4]),linewidth = 2)
-ax.set_ylim([0,1.05])
-ax.set_xlim([0,1])
-ax.set_xlabel('False Positive Rate',fontsize = 14)
-ax.set_ylabel('True Positive Rate',fontsize = 14)
-ax.legend(loc="lower right",fontsize = 12)
-plt.savefig("../figure/IMM_IEDB_benchmark.pdf",dpi = 300,transparent=True)
-plt.show()
-```
-
-
-
-```{python}
-fig,ax = plt.subplots(figsize = (8,8))
-ax.plot(IEDB_result[2],IEDB_result[3],label='TLimmuno2 : (AUC={0:.4f})'.format(IEDB_result[5]),linewidth = 2)
-ax.plot(net_ba_IEDB_result[2],net_ba_IEDB_result[3],label='NetMHCIIpan_BA : (AUC={0:.4f})'.format(net_ba_IEDB_result[5]),linewidth = 2)
-ax.plot(net_el_IEDB_result[2],net_el_IEDB_result[3],label='NetMHCIIpan_el : (AUC={0:.4f})'.format(net_el_IEDB_result[5]),linewidth = 2)
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('Recall',fontsize = 14)
-plt.ylabel('Precision',fontsize = 14)
-plt.legend(loc="upper right",fontsize = 12)
-plt.savefig("../figure/IMM_IEDB_benchmark_pr.pdf",dpi = 300,transparent=True)
-plt.show()
-```
 
 ### model test dataset
 

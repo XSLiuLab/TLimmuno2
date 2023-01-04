@@ -887,7 +887,7 @@ cal_nes_warp <- function(dt){
   return(pancancer_nes_ccf)
 }  #ES score
 
-all_mut_ccf <- readRDS("../data/mut_ccf_tpm_neo.rds")
+all_mut_ccf <- readRDS("../data/30_mut_ccf_tpm_neo.rds")
 all_mut_ccf <- all_mut_ccf %>%
   rename(ccf=ccf_hat) %>%
   mutate(neo=ifelse(neo=="neo","yes","no"))
@@ -936,13 +936,13 @@ neo_missense <- neo_missense %>% select(sample,neo,ccf) %>% filter(!is.na(ccf))
 
 library(parallel)
 neo_nes <- cal_nes_warp(neo_missense)
-saveRDS(neo_nes,file = "../data/neo_es.rds")
+saveRDS(neo_nes,file = "../data/30_neo_es.rds")
 ```
 
 ```{r simulation,eval = FALSE}
 #R
-neo_nes <- readRDS("../data/neo_es.rds")
-all_mut_ccf <- readRDS("mut_ccf_tpm_neo.rds")
+neo_nes <- readRDS("../data/30_neo_es.rds")
+all_mut_ccf <- readRDS("../data/30_mut_ccf_tpm_neo.rds")
 all_mut_ccf <- all_mut_ccf %>%
   rename(ccf=ccf_hat) %>%
   mutate(neo=ifelse(neo=="neo","yes","no"))
@@ -984,13 +984,13 @@ for (i in 1:2000){
   res[[i]] <- neo_nes_sim
   print(paste0("Complete ",i," sim. "))
 }
-saveRDS(res,file = "sim_2000_not_filter_driver.rds")
+saveRDS(res,file = "30_sim_2000_not_filter_driver.rds")
 
-neo_nes <- readRDS("neo_es.rds")
-sim_all <- readRDS("sim_2000_not_filter_driver.rds")
+neo_nes <- readRDS("30_neo_es.rds")
+sim_all <- readRDS("30_sim_2000_not_filter_driver.rds")
 sim_all <- bind_rows(sim_all)
 sim_all$cancer <- get_cancer_type(sim_all$sample,parallel = TRUE,cores = 20)
-saveRDS(sim_all,file = "sim_add_cancer.rds")
+saveRDS(sim_all,file = "30_sim_add_cancer.rds")
 ```
 
 ```{r plt_fig}
@@ -1065,13 +1065,93 @@ get_f1 <- function(dt,pancancer_p,dt2,median_es){
   p3 <- p1 + p2 + plot_layout(widths = c(1, 8))
 }
 
-p2 <- get_f1(neo_nes,pancancer_p = 0.0005,
+p2 <- get_f1(neo_nes,pancancer_p = "< 0.0005",
              dt2 = neo_nes_summ,median_es = median(neo_nes$es))
 p2
 ggsave("../figure/immuno_edit.pdf",width = 12,height = 5,dpi = 300)
 ```
 
-In TCGA pan-cancer cohort, when samples with antigenic and driver mutations lying on the same gene are removed, the observed median ESCCF is -0.024 (n = 5,524, P-value = 0.0005). By comparing simulated median ES distribution, several cancer types including adrenocortical carcinoma (ACC), Thymoma (THYM), Esophageal carcinoma (ESCA), Cervical squamous cell carcinoma and endocervical adenocarcinoma (CESC), Cervical squamous cell carcinoma and endocervical adenocarcinoma (LUAD) show significant low ESCCF values
+we also use 30% cutoff to define neoantigen and calculate ESccf score: 
+
+```{r}
+#R
+neo_nes <- readRDS("../data/30_neo_es.rds")
+sim_all <- readRDS("../data/30_sim_add_cancer.rds")
+sim_all %>%
+  group_by(cancer,sim_num) %>%
+  summarise(median_es=median(es)) -> summ2
+neo_nes$cancer <- get_cancer_type(neo_nes$sample)
+neo_nes_summ <- neo_nes %>%
+  group_by(cancer) %>% summarise(median_es=median(es))
+sim_all %>%
+  group_by(sim_num) %>%
+  summarise(median_es=median(es)) -> summ
+p <- WVPlots::ShadedDensity(frame = summ,
+                            xvar = "median_es",
+                            threshold = median(neo_nes$es),
+                            title = "",
+                            tail = "left")
+
+p$layers[[1]]$aes_params$colour <- "red"
+p$layers[[1]]$aes_params$size <- 1
+p$layers[[2]]$aes_params$fill <- "blue"     #geom_ribbon
+p$layers[[3]]$aes_params$colour <- "black"
+p$layers[[3]]$aes_params$size <- 1
+#p$layers[[4]]$aes_params$label <- "Actual median ES" #geom_text
+p1 <- p + labs(x="Simulation median es")+
+  theme_prism()
+p1
+ggsave("../figure/null_dis_30.pdf")
+##cancer type
+neo_nes_summ <- neo_nes_summ %>%
+  rowwise() %>%
+  mutate(p=mean(summ2$median_es[summ2$cancer==cancer] <= median_es))
+get_f1 <- function(dt,pancancer_p,dt2,median_es){
+  p1 <- ggplot(data=dt,aes(x=1,y=es))+
+    geom_violin(alpha=0.7,width=0.5)+
+    geom_boxplot(width=0.2)+
+    theme_prism()+
+    labs(x=paste0("median es = ",round(median_es,digits = 3),"\n n = ",nrow(dt)),y = "ESccf",size=5)+
+    theme(axis.ticks.x = element_blank(),
+          axis.text.x = element_blank())+
+    theme(text = element_text(size = 10))+
+    annotate(geom="text", x=1, y=1.1, label=paste0("p = ",pancancer_p),
+             color="red",size=4)
+  dt$cancer <- get_cancer_type(dt$sample)
+  dt %>% group_by(cancer) %>%
+    summarise(median_est=median(es),c=n()) %>%
+    arrange(median_est) %>%
+    mutate(label=paste0(cancer,"\n(n=",c,")"))-> summ1
+  summ1 <- left_join(summ1,dt2 %>% select(cancer,p))
+  summ1$p <- signif(summ1$p,digits = 1)
+  summ1 <- summ1 %>%
+    mutate(sig=case_when(
+      p <= 0.05 & p > 0.01 ~ "*",
+      p < 0.01 ~ "**",
+      TRUE ~ "ns"
+    ))
+  dt <- left_join(dt,summ1)
+  dt$label <- factor(dt$label,levels = summ1$label)
+  df2 <- data.frame(x = 1:nrow(summ1), y = 1.1, family = summ1$sig)
+  p2 <- ggplot(data=dt,aes(x=label,y=es))+
+    geom_boxplot()+
+    theme_prism()+
+    theme(axis.title.x = element_blank())+
+    theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1))+
+    theme(text = element_text(size = 7))+
+    geom_text(data=df2,aes(x=x,y=y,label = family))+
+    geom_hline(yintercept=0,
+               color = "red", size=1)+labs(y = "")
+  p3 <- p1 + p2 + plot_layout(widths = c(1, 8))
+}
+
+p2 <- get_f1(neo_nes,pancancer_p = "0.14",
+             dt2 = neo_nes_summ,median_es = median(neo_nes$es))
+p2
+ggsave("../figure/immuno_edit_30.pdf",width = 12,height = 5,dpi = 300)
+```
+
+In TCGA pan-cancer cohort, when samples with antigenic and driver mutations lying on the same gene are removed, the observed median ESCCF is -0.024 (n = 5,524, P-value < 0.0005). By comparing simulated median ES distribution, several cancer types including adrenocortical carcinoma (ACC), Thymoma (THYM), Esophageal carcinoma (ESCA), Cervical squamous cell carcinoma and endocervical adenocarcinoma (CESC), Cervical squamous cell carcinoma and endocervical adenocarcinoma (LUAD) show significant low ESCCF values
 
 ```{r}
 sim_all <- readRDS("../data/net_sim_add_cancer.rds")

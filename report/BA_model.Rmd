@@ -626,12 +626,36 @@ plt.show()
 BA_result["pre_label"] = BA_result["prediction"].map(lambda x : 1 if x>0.426 else 0)
 BA_CM = confusion_matrix(BA_result["label"],BA_result["pre_label"])
 BA_CM = BA_CM/len(BA_result)
-netMHC_result["pre_label"] = netMHC_result["percentile_rank"].map(lambda x : 1 if x <10 else 0)
+netMHC_result["pre_label"] = netMHC_result["percentile_rank"].map(lambda x : 1 if x <2 else 0)
 netMHC_CM = confusion_matrix(netMHC_result["measurement_value"],netMHC_result["pre_label"])
 netMHC_CM = netMHC_CM/len(netMHC_result)
-mix_result["pre_label"] = mix_result["%Rank_best"].map(lambda x : 1 if x <10 else 0)
+mix_result["pre_label"] = mix_result["%Rank_best"].map(lambda x : 1 if x <2 else 0)
 mix_CM = confusion_matrix(mix_result["label"],mix_result["pre_label"])
 mix_CM = mix_CM/len(mix_result)
+```
+
+```{python}
+import math
+
+def call_metrics(CM):
+    tn = CM.ravel()[0]
+    fp = CM.ravel()[1]
+    fn = CM.ravel()[2]
+    tp = CM.ravel()[3]
+    se = tp/(tp+fn)
+    sp = tn/(tn+fp)
+    ppv = tp/(tp+fp)
+    npv = tn/(tn+fn)
+    f_score= 2*tp/(2*tp+fp+fn)
+    DOP =  math.sqrt((se-1)**2+(sp-1)**2+(ppv-1)**2+(npv-1)**2)
+    
+    return se,sp,ppv,npv,f_score,DOP
+
+call_metrics(BA_CM)
+call_metrics(netMHC_CM)
+call_metrics(mix_CM)
+```
+```{python}
 fig,ax = plt.subplots(figsize = (8,6))
 sns.heatmap(BA_CM, annot=True,cmap="YlGnBu",vmin=0, vmax=0.6)
 plt.ylabel("True label")
@@ -663,7 +687,7 @@ plt.savefig("../figure/mixMHC2pred_CM.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
-By using IEDB recommend cutoff 10%rank and 0.426 (500nm, log50k transformed), we found NetMHCIIpan and MixMHC2pred tend to predict the result as negative while our BA model can correctly distinguish between negatives and positives
+By using IEDB recommend cutoff 2%rank and 0.426 (500nm, log50k transformed), we found NetMHCIIpan and MixMHC2pred tend to predict the result as negative while our BA model can correctly distinguish between negatives and positives
 
 ```{python pre_recall_fig, include = FALSE}
 #python
