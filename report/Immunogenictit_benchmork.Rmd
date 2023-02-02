@@ -579,12 +579,17 @@ neoantigen_process.to_csv("../data/neoantigen_pro.csv")
 
 result = pd.read_csv("../data/neoantigen_result.csv")
 result = result[result["immunogenic"] == 1]
+result.index = range(len(result))
 Rank = pd.melt(result[["WT_Rank","Mut_Rank"]],var_name = "Type",value_name = "Rank")
 from scipy import stats
 _,p = stats.wilcoxon(result["WT_Rank"],result["Mut_Rank"])
 fig,ax = plt.subplots(figsize = (4,6))
 ax = sns.boxplot(data = Rank,x = "Type",y = "Rank",width = 0.4,color = "skyblue",linewidth = 2,showfliers = False)
-b = sns.stripplot(data = Rank,x = "Type",y = "Rank",color = "red")
+b = sns.stripplot(data = Rank,x = "Type",y = "Rank",color = "black",jitter = False)
+
+for i in range(len(result)):
+  plt.plot([0,1],[result["WT_Rank"][i],result["Mut_Rank"][i]],c ="gray",lw = 0.25)
+
 x1, x2 = 0, 1   
 y, h, col = Rank['Rank'].max() + 0.1, 0.1, 'k'
 plt.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1, c=col)
@@ -608,6 +613,7 @@ _,p = stats.wilcoxon(result["WT_prediction"],result["Mut_prediction"])
 fig,ax = plt.subplots(figsize = (4,6))
 ax = sns.boxplot(data = Rank,x = "Type",y = "Score",width = 0.4,color = "skyblue",linewidth = 2,showfliers = False)
 b = sns.stripplot(data = Rank,x = "Type",y = "Score",color = "red")
+sns.lineplot(data = Rank,x = "Type",y = "Score",color = "red")
 x1, x2 = 0, 1   
 y, h, col = Rank['Score'].max() + 0.1, 0.1, 'k'
 plt.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1, c=col)
@@ -618,7 +624,7 @@ plt.yticks(np.arange(0,1.2,0.2))
 plt.xticks((0,1),labels = ["WT peptide","Neoantigen"])
 plt.tight_layout()
 sns.despine(offset = 3, trim = True)
-plt.savefig("../figure/neoantigen_prediction.pdf",dpi = 300,transparent=True)
+#plt.savefig("../figure/neoantigen_prediction.pdf",dpi = 300,transparent=True)
 plt.show()
 ```
 
