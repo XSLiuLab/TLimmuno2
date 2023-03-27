@@ -68,8 +68,7 @@ optional arguments:
 
 
 ## Citation
-
-waitting to add paper
+Guangshuai Wang, Tao Wu, Wei Ning, Kaixuan Diao, Xiaoqin Sun, Jinyu Wang, Chenxu Wu, Jing Chen, Dongliang Xu, Xue-Song Liu, TLimmuno2: predicting MHC class II antigen immunogenicity through transfer learning, Briefings in Bioinformatics, 2023;, bbad116, https://doi.org/10.1093/bib/bbad116
 
 ## Acknowledgement
 
